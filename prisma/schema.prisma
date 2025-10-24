@@ -1,0 +1,197 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  email         String     @unique
+  phone         String     @unique
+  passwordHash  String  
+  role          Role
+  isVerified    Boolean    @default(false) // Vérifie si email est validé(il passe a true dès qu'il s'est déja connecté)
+  pharmacies    Pharmacie[] // ✅ Plusieurs pharmacies
+  ordonnances   Ordonnance[] // ✅ Plusieurs Ordonnance
+  livreur       Livreur?
+  client        Client?
+  otps          Otp[]      // ✅ Relation avec table OTP
+  createdAt     DateTime   @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+model Ordonnance {
+  id            String           @id @default(cuid())
+  imageUrl      String
+  description   String?
+  userId        String
+  user          User             @relation(fields: [userId], references: [id])
+  statut        OrdonnanceStatut @default(ENVOYEE)
+  prixTotal     Decimal?         @db.Decimal(10,2)
+  pharmacieId   String?
+  pharmacie     Pharmacie?       @relation(fields: [pharmacieId], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+@@index([userId])
+@@index([pharmacieId])
+@@index([statut])
+}
+
+enum OrdonnanceStatut {
+  ENVOYEE
+  EN_COURS
+  PRET
+  LIVREE
+  ANNULEE
+}
+
+enum Role {
+  ADMIN
+  PHARMACIE
+  LIVREUR
+  CLIENT
+}
+
+model Otp {
+  id          String   @id @default(cuid())
+  code        String   // ex: "482915"
+  expiresAt   DateTime // Date d'expiration
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  used        Boolean  @default(false) // ✅ Pour marquer l’OTP comme consommé
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Token {
+  id        String     @id @default(cuid())
+  email     String
+  token     String
+  expires   DateTime
+  type      TokenType
+  createdAt        DateTime        @default(now())
+
+  @@unique([email, token])
+}
+
+enum TokenType {
+  REFRESH
+  VERIFICATION
+  PASSWORD_RESET
+  OAUTH // Google/Github
+}
+
+model Pharmacie {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  ville     String?
+  commune   String?
+  quartier  String?
+  phone     String?
+  logo      String? // Logo de la pharmacie
+  slogan    String? // Slogan de la pharmacie
+  userId    String     
+  user      User       @relation(fields: [userId], references: [id])
+
+  createdAt      DateTime  @default(now())     // ✅ date de création auto
+  updatedAt DateTime @updatedAt @default(now())    // ✅ date de mise à jour auto
+
+  produits  Produit[]
+  commandes Commande[] // Commandes reçues
+  ordonnances   Ordonnance[] // ✅ Plusieurs Ordonnance
+}
+
+model Livreur {
+  id        String     @id @default(cuid())
+  imageUrl    String?
+  ville     String?
+  commune   String?
+  quartier   String?
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
+  commandes Commande[] // Commandes prises
+}
+
+model Client {
+  id        String     @id @default(cuid())
+  adresse   String?
+  ville     String?
+  commune   String?
+  quartier  String?
+  phone     String?
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
+
+  createdAt DateTime   @default(now())
+}
+
+model Produit {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  prix        Int        // Prix actuel du produit
+  pharmacieId String
+  categoryId   String     // 🔗 clé étrangère vers Category
+  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
+  pharmacie    Pharmacie   @relation(fields: [pharmacieId], references: [id])
+  createdAt   DateTime   @default(now())
+  commandes   Commande[] // Relation inverse avec Commande
+  category     Category   @relation(fields: [categoryId], references: [id])
+}
+model Category {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  produits  Produit[]
+  createdAt DateTime   @default(now())
+}
+
+model Commande {
+  id                   String          @id @default(cuid())
+  produitId            String
+  pharmacieId           String
+  livreurId            String?
+  status               CommandeStatus  @default(EN_ATTENTE)
+  quantite             Int
+  prixUnitaire         Int
+  total                Int
+  adresseLivraison     String?
+  telephoneClient      String?
+  deliveredAt          DateTime?       // Date et heure de la livraison
+  takenAt              DateTime?       // Date prise par un livreur
+  cancelledAt           DateTime?       // Date annulation
+  instructionsLivraison String?        // Précisions ou commentaires pour la livraison
+  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
+  
+  createdAt            DateTime        @default(now())
+
+  produit              Produit          @relation(fields: [produitId], references: [id])
+  pharmacie            Pharmacie        @relation(fields: [pharmacieId], references: [id])
+  livreur              Livreur?         @relation(fields: [livreurId], references: [id])
+  
+}
+
+enum CommandeStatus {
+  EN_ATTENTE
+  PUBLIER_AUX_LIVREURS
+  EN_COURS
+  LIVREE
+  ANNULEE_PAR_PHARMACIE
+  ANNULEE_PAR_LIVREUR
+}
+
+
+
+
