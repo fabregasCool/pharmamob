@@ -1,6 +1,6 @@
 // src/app/api/pharmaciebackend/produits/[produitId]/update/route.ts
 import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
 /**
@@ -22,11 +22,11 @@ interface JwtPayload {
 }
 
 export async function PUT(
-  req: Request,
-  context: { params: { produitId: string } }
+  req: NextRequest,
+  { params }: { params: { produitId: string } }
 ) {
   try {
-    const { produitId } = context.params;
+    const { produitId } = params;
 
     // 1️⃣ Vérifier le token JWT
     const authHeader = req.headers.get("Authorization");
