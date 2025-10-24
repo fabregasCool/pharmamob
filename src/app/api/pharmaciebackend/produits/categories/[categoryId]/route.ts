@@ -5,11 +5,14 @@ import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { categoryId: string } }
-) {
-  const { categoryId } = context.params;
+interface RouteContext {
+  params: {
+    categoryId: string;
+  };
+}
+
+export async function GET(req: NextRequest, context: RouteContext) {
+  const categoryId = context?.params;
 
   try {
     // 1️⃣ Vérifier le header Authorization
