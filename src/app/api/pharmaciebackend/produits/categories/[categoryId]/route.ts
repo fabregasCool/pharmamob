@@ -1,19 +1,20 @@
-//src/app/api/pharmaciebackend/produits/categories/[categoryId]/route.ts
-//Recuperer un seul category par son id
+// src/app/api/pharmaciebackend/produits/categories/[categoryId]/route.ts
 import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  req: Request,
-  { params }: { params: { categoryId: string } }
+  req: NextRequest,
+  context: { params: { categoryId: string } }
 ) {
+  const { categoryId } = context.params;
+
   try {
     // 1️⃣ Vérifier le header Authorization
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Token manquant" }, { status: 401 });
     }
 
@@ -30,10 +31,12 @@ export async function GET(
         { status: 401 }
       );
     }
-    // 3️⃣ Retrouver l’utilisateur et ses pharmacies
+
+    // 3️⃣ Retrouver l’utilisateur
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
     });
+
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
@@ -41,9 +44,9 @@ export async function GET(
       );
     }
 
-    // 3️⃣ Chercher la catégorie par ID
+    // 4️⃣ Chercher la catégorie par ID
     const category = await prisma.category.findUnique({
-      where: { id: params.categoryId },
+      where: { id: categoryId },
     });
 
     if (!category) {
@@ -53,13 +56,13 @@ export async function GET(
       );
     }
 
-    // 4️⃣ Retourner la catégorie trouvée
-    return NextResponse.json({
-      success: true,
-      category,
-    });
+    // 5️⃣ Retourner la catégorie trouvée
+    return NextResponse.json({ success: true, category });
   } catch (err) {
-    console.error("❌ Erreur GET /api/pharmaciebackend/categories/[id]:", err);
+    console.error(
+      "❌ Erreur GET /api/pharmaciebackend/produits/categories/[categoryId]:",
+      err
+    );
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
