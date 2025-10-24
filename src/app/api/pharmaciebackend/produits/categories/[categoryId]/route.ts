@@ -6,7 +6,10 @@ import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     // 1️⃣ Vérifier le header Authorization
     const authHeader = req.headers.get("Authorization");
@@ -21,9 +24,20 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
     } catch (err) {
+      console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
         { status: 401 }
+      );
+    }
+    // 3️⃣ Retrouver l’utilisateur et ses pharmacies
+    const user = await prisma.user.findUnique({
+      where: { email: decoded.email },
+    });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Utilisateur introuvable" },
+        { status: 404 }
       );
     }
 

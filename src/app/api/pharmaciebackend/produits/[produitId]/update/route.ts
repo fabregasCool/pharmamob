@@ -1,8 +1,20 @@
+// src/app/api/pharmaciebackend/produits/[produitId]/update/route.ts
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
-const prisma = new PrismaClient();
+/**
+ * ✅ Déclaration globale propre pour Prisma (évite les erreurs TS7005 et parsing)
+ */
+declare global {
+  /// eslint-disable-next-line no-var
+  var __prisma: PrismaClient | undefined;
+}
+
+const prisma = globalThis.__prisma ?? new PrismaClient();
+if (!globalThis.__prisma) {
+  globalThis.__prisma = prisma;
+}
 
 interface JwtPayload {
   email: string;
@@ -11,10 +23,10 @@ interface JwtPayload {
 
 export async function PUT(
   req: Request,
-  { params }: { params: { produitId: string } }
+  context: { params: { produitId: string } }
 ) {
   try {
-    const { produitId } = params; // ✅ récupération correcte du paramètre dynamique
+    const { produitId } = context.params;
 
     // 1️⃣ Vérifier le token JWT
     const authHeader = req.headers.get("Authorization");
@@ -63,7 +75,7 @@ export async function PUT(
       );
     }
 
-    // 4️⃣ Vérifier que le produit appartient à l'une des pharmacies du user
+    // 4️⃣ Vérifier la propriété
     const isOwner = user.pharmacies.some((p) => p.id === produit.pharmacieId);
     if (!isOwner) {
       return NextResponse.json(
@@ -72,11 +84,11 @@ export async function PUT(
       );
     }
 
-    // 5️⃣ Lire les données du body
+    // 5️⃣ Lire le corps de la requête
     const body = await req.json();
     const { title, description, prix, imageUrl, categoryId } = body;
 
-    // 6️⃣ Si une catégorie est fournie, vérifier qu’elle existe
+    // 6️⃣ Vérifier la catégorie
     if (categoryId) {
       const category = await prisma.category.findUnique({
         where: { id: categoryId },
@@ -97,7 +109,7 @@ export async function PUT(
         description,
         prix,
         imageUrl,
-        categoryId: categoryId ?? produit.categoryId, // ✅ conserve l’ancienne catégorie si non changée
+        categoryId: categoryId ?? produit.categoryId,
       },
       include: {
         category: true,
@@ -105,7 +117,6 @@ export async function PUT(
       },
     });
 
-    // 8️⃣ Réponse OK
     return NextResponse.json(
       {
         message: "✅ Produit mis à jour avec succès",
@@ -119,7 +130,5 @@ export async function PUT(
       { error: "Erreur interne du serveur" },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }

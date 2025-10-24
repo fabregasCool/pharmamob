@@ -27,6 +27,8 @@ export async function PUT(req: Request) {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
     } catch (err) {
+      console.error("Erreur de vérification du token:", err);
+
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
         { status: 401 }
@@ -43,13 +45,19 @@ export async function PUT(req: Request) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "Utilisateur non trouvé" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Utilisateur non trouvé" },
+        { status: 404 }
+      );
     }
 
     // 4️⃣ Vérifier l'ancien mot de passe
     const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
     if (!isMatch) {
-      return NextResponse.json({ error: "Ancien mot de passe incorrect" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Ancien mot de passe incorrect" },
+        { status: 400 }
+      );
     }
 
     // 5️⃣ Hacher et mettre à jour le nouveau mot de passe
@@ -60,7 +68,10 @@ export async function PUT(req: Request) {
     });
 
     // 6️⃣ Réponse succès
-    return NextResponse.json({ success: true, message: "Mot de passe mis à jour avec succès" });
+    return NextResponse.json({
+      success: true,
+      message: "Mot de passe mis à jour avec succès",
+    });
   } catch (error) {
     // Gestion des erreurs de validation Zod
     if (error instanceof z.ZodError) {

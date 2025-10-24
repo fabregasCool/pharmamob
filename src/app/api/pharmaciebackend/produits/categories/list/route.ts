@@ -20,6 +20,7 @@ export async function GET(req: Request) {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
     } catch (err) {
+      console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
         { status: 401 }
