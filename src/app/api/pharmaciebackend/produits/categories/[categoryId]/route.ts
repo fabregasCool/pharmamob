@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { categoryId: string } }
 ) {
   try {
     // 1️⃣ Vérifier le header Authorization
@@ -43,7 +43,7 @@ export async function GET(
 
     // 3️⃣ Chercher la catégorie par ID
     const category = await prisma.category.findUnique({
-      where: { id: params.id },
+      where: { id: params.categoryId },
     });
 
     if (!category) {
