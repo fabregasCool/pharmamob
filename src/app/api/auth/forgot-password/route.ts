@@ -5,10 +5,11 @@ import crypto from "crypto";
 import { Resend } from "resend";
 
 const prisma = new PrismaClient();
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+  ? new Resend(process.env.RESEND_API_KEY)
+  : null;
 
-// ⏱️ délai entre deux demandes (ex: 5 min)
-const REQUEST_INTERVAL_MS = 5 * 60 * 1000;
+const REQUEST_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function POST(req: Request) {
   try {
@@ -18,7 +19,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email invalide" }, { status: 400 });
     }
 
-    // Vérifier si l’utilisateur existe (mais ne rien révéler)
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       return NextResponse.json({
@@ -27,7 +27,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Vérifier s’il existe déjà un token valide récent
     const existingToken = await prisma.token.findFirst({
       where: {
         email,
@@ -48,16 +47,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Supprimer d’anciens tokens
     await prisma.token.deleteMany({
       where: { email, type: TokenType.PASSWORD_RESET },
     });
 
-    // Générer un token sécurisé
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 5 * 60 * 1000); // expire dans 5 min
+    const expires = new Date(Date.now() + 5 * 60 * 1000);
 
-    // Sauvegarder le nouveau token
     await prisma.token.create({
       data: {
         token: resetToken,
@@ -67,29 +63,32 @@ export async function POST(req: Request) {
       },
     });
 
-    // Construire l’URL de reset
-    const resetUrl = `${process.env.APP_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${
+      process.env.APP_URL ?? "http://localhost:3000"
+    }/reset-password?token=${resetToken}`;
     console.log("Reset URL:", resetUrl);
 
-    // Envoi par Resend
-    const result = await resend.emails.send({
-      from: process.env.MAIL_FROM || "no-reply@pharmamobapp.com",
-      to: email,
-      subject: "Réinitialisation de votre mot de passe",
-      html: `
-        <p>Bonjour,</p>
-        <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
-        <p>
-          <a href="${resetUrl}" 
-             style="display:inline-block;padding:10px 16px;border-radius:8px;text-decoration:none;background:#4F46E5;color:#fff;text-decoration:none">
-            Réinitialiser mon mot de passe
-          </a>
-        </p>
-        <p>Ce lien expire dans 5 minutes.</p>
-        <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
-      `,
-    });
-    console.log("Resend result:", result);
+    if (resend) {
+      await resend.emails.send({
+        from: process.env.MAIL_FROM || "no-reply@pharmamobapp.com",
+        to: email,
+        subject: "Réinitialisation de votre mot de passe",
+        html: `
+          <p>Bonjour,</p>
+          <p>Vous avez demandé la réinitialisation de votre mot de passe.</p>
+          <p>
+            <a href="${resetUrl}" 
+               style="display:inline-block;padding:10px 16px;border-radius:8px;text-decoration:none;background:#4F46E5;color:#fff;">
+              Réinitialiser mon mot de passe
+            </a>
+          </p>
+          <p>Ce lien expire dans 5 minutes.</p>
+          <p>Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
+        `,
+      });
+    } else {
+      console.warn("⚠️ RESEND_API_KEY manquante — aucun email envoyé");
+    }
 
     return NextResponse.json({
       success: true,
