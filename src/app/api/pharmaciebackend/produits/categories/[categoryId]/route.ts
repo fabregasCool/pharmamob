@@ -1,29 +1,27 @@
 // src/app/api/pharmaciebackend/produits/categories/[categoryId]/route.ts
 import { PrismaClient } from "@prisma/client";
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-interface RouteContext {
-  params: {
-    categoryId: string;
-  };
-}
-
-export async function GET(req: NextRequest, context: RouteContext) {
-  const categoryId = context?.params;
-
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ categoryId: string }> }
+) {
   try {
-    // 1️⃣ Vérifier le header Authorization
+    // 1️⃣ Attendre les paramètres (Next.js 15+)
+    const { categoryId } = await context.params;
+
+    // 2️⃣ Vérifier le header Authorization
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Token manquant" }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
 
-    // 2️⃣ Vérifier et décoder le token
+    // 3️⃣ Vérifier et décoder le token JWT
     let decoded: { email: string };
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
@@ -35,11 +33,10 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // 3️⃣ Retrouver l’utilisateur
+    // 4️⃣ Retrouver l’utilisateur dans la base
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
     });
-
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
@@ -47,7 +44,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // 4️⃣ Chercher la catégorie par ID
+    // 5️⃣ Chercher la catégorie par son ID
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
     });
@@ -59,8 +56,11 @@ export async function GET(req: NextRequest, context: RouteContext) {
       );
     }
 
-    // 5️⃣ Retourner la catégorie trouvée
-    return NextResponse.json({ success: true, category });
+    // 6️⃣ Retourner la catégorie trouvée
+    return NextResponse.json({
+      success: true,
+      category,
+    });
   } catch (err) {
     console.error(
       "❌ Erreur GET /api/pharmaciebackend/produits/categories/[categoryId]:",
