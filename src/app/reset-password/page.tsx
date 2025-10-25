@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
-
   const token = searchParams.get("token");
 
   const [password, setPassword] = useState("");
@@ -252,5 +251,13 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Chargement du formulaire...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
