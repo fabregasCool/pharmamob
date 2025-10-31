@@ -24,6 +24,7 @@ model User {
   isVerified    Boolean    @default(false) // Vérifie si email est validé(il passe a true dès qu'il s'est déja connecté)
   pharmacies    Pharmacie[] // ✅ Plusieurs pharmacies
   ordonnances   Ordonnance[] // ✅ Plusieurs Ordonnance
+  bondecommandes   Bondecommande[] // ✅ Plusieurs Bondecommande
   livreur       Livreur?
   client        Client?
   otps          Otp[]      // ✅ Relation avec table OTP
@@ -49,6 +50,33 @@ model Ordonnance {
 }
 
 enum OrdonnanceStatut {
+  ENVOYEE
+  EN_COURS
+  PRET
+  LIVREE
+  ANNULEE
+}
+
+model Bondecommande {
+  id            String           @id @default(cuid())
+  imageUrl      String
+  description   String?
+  securite_sociale Int
+  userId        String
+  user          User             @relation(fields: [userId], references: [id])
+  statut        BondecommandeStatut @default(ENVOYEE)
+  prixTotal     Decimal?         @db.Decimal(10,2)
+  pharmacieId   String?
+  pharmacie     Pharmacie?       @relation(fields: [pharmacieId], references: [id])
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+@@index([userId])
+@@index([pharmacieId])
+@@index([statut])
+}
+
+enum BondecommandeStatut {
   ENVOYEE
   EN_COURS
   PRET
@@ -111,6 +139,7 @@ model Pharmacie {
   produits  Produit[]
   commandes Commande[] // Commandes reçues
   ordonnances   Ordonnance[] // ✅ Plusieurs Ordonnance
+  bondecommandes   Bondecommande[] // ✅ Plusieurs Bondecommande
 }
 
 model Livreur {
