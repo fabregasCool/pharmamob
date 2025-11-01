@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 
 // 📌 Validation du corps de la requête
 const bonDeCommandeSchema = z.object({
-  imageUrl: z.string().url("L’URL de l’image est invalide").optional(), // ✅ maintenant facultatif
+  imageUrl: z.string().url("L’URL de l’image est invalide"),
   description: z.string().optional(),
   securite_sociale: z
     .string()
