@@ -1,10 +1,24 @@
-//api/clientbackend/bondecommandes/envoyees/create/route.ts
-//Il permet d'envoyer une bondecommande
+// api/clientbackend/bondecommandes/envoyees/create/route.ts
+// Il permet d'envoyer une bon de commande
+
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
+
+// 📌 Validation du corps de la requête
+const bonDeCommandeSchema = z.object({
+  imageUrl: z.string().url("L’URL de l’image est invalide").optional(), // ✅ maintenant facultatif
+  description: z.string().optional(),
+  securite_sociale: z
+    .string()
+    .regex(
+      /^\d{13}$/,
+      "Le numéro de sécurité sociale doit contenir exactement 13 chiffres"
+    ),
+});
 
 export async function POST(req: Request) {
   try {
@@ -40,18 +54,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4️⃣ Lire le corps de la requête
+    // 4️⃣ Lire et valider le corps de la requête
     const body = await req.json();
-    const { imageUrl, description, securite_sociale } = body;
+    const parsed = bonDeCommandeSchema.safeParse(body);
 
-    if (!imageUrl) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "L’image est obligatoire" },
+        { error: parsed.error.issues[0].message },
         { status: 400 }
       );
     }
 
-    // 5️⃣ Créer l’bondecommande dans la base
+    const { imageUrl, description, securite_sociale } = parsed.data;
+
+    // 5️⃣ Créer la bon de commande dans la base
     const bondecommande = await prisma.bondecommande.create({
       data: {
         userId: user.id,
@@ -65,7 +81,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         success: true,
-        message: "bondecommande enregistrée avec succès",
+        message: "Bon de commande enregistrée avec succès",
         bondecommande,
       },
       { status: 201 }

@@ -61,7 +61,7 @@ model Bondecommande {
   id            String           @id @default(cuid())
   imageUrl      String
   description   String?
-  securite_sociale Int
+  securite_sociale String
   userId        String
   user          User             @relation(fields: [userId], references: [id])
   statut        BondecommandeStatut @default(ENVOYEE)
