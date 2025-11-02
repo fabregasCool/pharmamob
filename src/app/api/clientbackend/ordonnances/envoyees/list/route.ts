@@ -40,11 +40,12 @@ export async function GET(req: Request) {
       );
     }
 
-    // 4️⃣ Récupérer toutes les ordonnances ENVOYEE de cet utilisateur
+    // 4️⃣ Récupérer toutes les ordonnances ENVOYEE de cet utilisateur (non supprimées)
     const ordonnances = await prisma.ordonnance.findMany({
       where: {
         userId: user.id,
         statut: "ENVOYEE",
+        deletedAt: null, // ✅ On filtre pour ne prendre que les ordonnances actives
       },
       orderBy: {
         createdAt: "desc",
