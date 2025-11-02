@@ -41,10 +41,12 @@ export async function GET(req: Request) {
     }
 
     // 4️⃣ Récupérer toutes les bondecommandes ENVOYEE de cet utilisateur
+
     const bondecommandes = await prisma.bondecommande.findMany({
       where: {
         userId: user.id,
         statut: "ENVOYEE",
+        deletedAt: null, // ✅ On filtre pour ne prendre que les bondecommandes actives
       },
       orderBy: {
         createdAt: "desc",
