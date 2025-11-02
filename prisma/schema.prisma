@@ -41,6 +41,7 @@ model Ordonnance {
   prixTotal     Decimal?         @db.Decimal(10,2)
   pharmacieId   String?
   pharmacie     Pharmacie?       @relation(fields: [pharmacieId], references: [id])
+  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
@@ -68,6 +69,7 @@ model Bondecommande {
   prixTotal     Decimal?         @db.Decimal(10,2)
   pharmacieId   String?
   pharmacie     Pharmacie?       @relation(fields: [pharmacieId], references: [id])
+  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
