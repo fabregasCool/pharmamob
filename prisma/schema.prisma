@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  // output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -15,39 +8,194 @@ datasource db {
 }
 
 model User {
-  id            String     @id @default(cuid())
-  name          String
-  email         String     @unique
-  phone         String     @unique
-  passwordHash  String  
-  role          Role
-  isVerified    Boolean    @default(false) // Vérifie si email est validé(il passe a true dès qu'il s'est déja connecté)
-  pharmacies    Pharmacie[] // ✅ Plusieurs pharmacies
-  ordonnances   Ordonnance[] // ✅ Plusieurs Ordonnance
-  bondecommandes   Bondecommande[] // ✅ Plusieurs Bondecommande
-  livreur       Livreur?
-  client        Client?
-  otps          Otp[]      // ✅ Relation avec table OTP
-  createdAt     DateTime   @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  phone          String          @unique
+  passwordHash   String
+  role           Role
+  isVerified     Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt
+  bondecommandes Bondecommande[]
+  cart           Cart?
+  client         Client?
+  livreur        Livreur?
+  ordonnances    Ordonnance[]
+  otps           Otp[]
+  pharmacies     Pharmacie[]
 }
-model Ordonnance {
-  id            String           @id @default(cuid())
-  imageUrl      String
-  description   String?
-  userId        String
-  user          User             @relation(fields: [userId], references: [id])
-  statut        OrdonnanceStatut @default(ENVOYEE)
-  prixTotal     Decimal?         @db.Decimal(10,2)
-  pharmacieId   String?
-  pharmacie     Pharmacie?       @relation(fields: [pharmacieId], references: [id])
-  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
 
-@@index([userId])
-@@index([pharmacieId])
-@@index([statut])
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+}
+
+model CartItem {
+  id            String   @id @default(cuid())
+  cartId        String
+  produitId     String
+  quantity      Int
+  priceSnapshot Int
+  createdAt     DateTime @default(now())
+  cart          Cart     @relation(fields: [cartId], references: [id])
+  produit       Produit  @relation(fields: [produitId], references: [id])
+
+  @@index([cartId])
+  @@index([produitId])
+}
+
+model Produit {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  prix        Int
+  createdAt   DateTime   @default(now())
+  deletedAt   DateTime?
+  pharmacieId String
+  categoryId  String
+  cartItems   CartItem[]
+  commandes   Commande[]
+  category    Category   @relation(fields: [categoryId], references: [id])
+  pharmacie   Pharmacie  @relation(fields: [pharmacieId], references: [id])
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  produits  Produit[]
+}
+
+model Ordonnance {
+  id          String           @id @default(cuid())
+  imageUrl    String
+  description String?
+  userId      String
+  statut      OrdonnanceStatut @default(ENVOYEE)
+  prixTotal   Decimal?         @db.Decimal(10, 2)
+  pharmacieId String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+  pharmacie   Pharmacie?       @relation(fields: [pharmacieId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([pharmacieId])
+  @@index([statut])
+}
+
+model Pharmacie {
+  id             String          @id @default(cuid())
+  name           String          @unique
+  ville          String?
+  commune        String?
+  quartier       String?
+  phone          String?
+  logo           String?
+  slogan         String?
+  userId         String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt
+  bondecommandes Bondecommande[]
+  commandes      Commande[]
+  ordonnances    Ordonnance[]
+  user           User            @relation(fields: [userId], references: [id])
+  produits       Produit[]
+}
+
+model Bondecommande {
+  id               String              @id @default(cuid())
+  imageUrl         String
+  description      String?
+  securite_sociale String
+  userId           String
+  statut           BondecommandeStatut @default(ENVOYEE)
+  prixTotal        Decimal?            @db.Decimal(10, 2)
+  pharmacieId      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+  pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
+  user             User                @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([pharmacieId])
+  @@index([statut])
+}
+
+model Otp {
+  id        String   @id @default(cuid())
+  code      String
+  expiresAt DateTime
+  userId    String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Token {
+  id        String    @id @default(cuid())
+  email     String
+  token     String
+  expires   DateTime
+  type      TokenType
+  createdAt DateTime  @default(now())
+
+  @@unique([email, token])
+}
+
+model Livreur {
+  id        String     @id @default(cuid())
+  imageUrl  String?
+  ville     String?
+  commune   String?
+  quartier  String?
+  userId    String     @unique
+  commandes Commande[]
+  user      User       @relation(fields: [userId], references: [id])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  adresse   String?
+  ville     String?
+  commune   String?
+  quartier  String?
+  phone     String?
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Commande {
+  id                    String         @id @default(cuid())
+  produitId             String
+  livreurId             String?
+  status                CommandeStatus @default(EN_ATTENTE)
+  quantite              Int
+  prixUnitaire          Int
+  total                 Int
+  adresseLivraison      String?
+  telephoneClient       String?
+  deliveredAt           DateTime?
+  takenAt               DateTime?
+  cancelledAt           DateTime?
+  instructionsLivraison String?
+  createdAt             DateTime       @default(now())
+  deletedAt             DateTime?
+  pharmacieId           String
+  livreur               Livreur?       @relation(fields: [livreurId], references: [id])
+  pharmacie             Pharmacie      @relation(fields: [pharmacieId], references: [id])
+  produit               Produit        @relation(fields: [produitId], references: [id])
 }
 
 enum OrdonnanceStatut {
@@ -56,26 +204,6 @@ enum OrdonnanceStatut {
   PRET
   LIVREE
   ANNULEE
-}
-
-model Bondecommande {
-  id            String           @id @default(cuid())
-  imageUrl      String
-  description   String?
-  securite_sociale String
-  userId        String
-  user          User             @relation(fields: [userId], references: [id])
-  statut        BondecommandeStatut @default(ENVOYEE)
-  prixTotal     Decimal?         @db.Decimal(10,2)
-  pharmacieId   String?
-  pharmacie     Pharmacie?       @relation(fields: [pharmacieId], references: [id])
-  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-
-@@index([userId])
-@@index([pharmacieId])
-@@index([statut])
 }
 
 enum BondecommandeStatut {
@@ -93,125 +221,11 @@ enum Role {
   CLIENT
 }
 
-model Otp {
-  id          String   @id @default(cuid())
-  code        String   // ex: "482915"
-  expiresAt   DateTime // Date d'expiration
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  used        Boolean  @default(false) // ✅ Pour marquer l’OTP comme consommé
-  createdAt   DateTime @default(now())
-
-  @@index([userId])
-}
-
-model Token {
-  id        String     @id @default(cuid())
-  email     String
-  token     String
-  expires   DateTime
-  type      TokenType
-  createdAt        DateTime        @default(now())
-
-  @@unique([email, token])
-}
-
 enum TokenType {
   REFRESH
   VERIFICATION
   PASSWORD_RESET
-  OAUTH // Google/Github
-}
-
-model Pharmacie {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  ville     String?
-  commune   String?
-  quartier  String?
-  phone     String?
-  logo      String? // Logo de la pharmacie
-  slogan    String? // Slogan de la pharmacie
-  userId    String     
-  user      User       @relation(fields: [userId], references: [id])
-
-  createdAt      DateTime  @default(now())     // ✅ date de création auto
-  updatedAt DateTime @updatedAt @default(now())    // ✅ date de mise à jour auto
-
-  produits  Produit[]
-  commandes Commande[] // Commandes reçues
-  ordonnances   Ordonnance[] // ✅ Plusieurs Ordonnance
-  bondecommandes   Bondecommande[] // ✅ Plusieurs Bondecommande
-}
-
-model Livreur {
-  id        String     @id @default(cuid())
-  imageUrl    String?
-  ville     String?
-  commune   String?
-  quartier   String?
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id])
-  commandes Commande[] // Commandes prises
-}
-
-model Client {
-  id        String     @id @default(cuid())
-  adresse   String?
-  ville     String?
-  commune   String?
-  quartier  String?
-  phone     String?
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id])
-
-  createdAt DateTime   @default(now())
-}
-
-model Produit {
-  id          String     @id @default(cuid())
-  title       String
-  description String?
-  imageUrl    String?
-  prix        Int        // Prix actuel du produit
-  pharmacieId String
-  categoryId   String     // 🔗 clé étrangère vers Category
-  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
-  pharmacie    Pharmacie   @relation(fields: [pharmacieId], references: [id])
-  createdAt   DateTime   @default(now())
-  commandes   Commande[] // Relation inverse avec Commande
-  category     Category   @relation(fields: [categoryId], references: [id])
-}
-model Category {
-  id        String     @id @default(cuid())
-  name      String     @unique
-  produits  Produit[]
-  createdAt DateTime   @default(now())
-}
-
-model Commande {
-  id                   String          @id @default(cuid())
-  produitId            String
-  pharmacieId           String
-  livreurId            String?
-  status               CommandeStatus  @default(EN_ATTENTE)
-  quantite             Int
-  prixUnitaire         Int
-  total                Int
-  adresseLivraison     String?
-  telephoneClient      String?
-  deliveredAt          DateTime?       // Date et heure de la livraison
-  takenAt              DateTime?       // Date prise par un livreur
-  cancelledAt           DateTime?       // Date annulation
-  instructionsLivraison String?        // Précisions ou commentaires pour la livraison
-  deletedAt   DateTime?  // ✅ Valeur null = actif, Valeur non-null = supprimé
-  
-  createdAt            DateTime        @default(now())
-
-  produit              Produit          @relation(fields: [produitId], references: [id])
-  pharmacie            Pharmacie        @relation(fields: [pharmacieId], references: [id])
-  livreur              Livreur?         @relation(fields: [livreurId], references: [id])
-  
+  OAUTH
 }
 
 enum CommandeStatus {
@@ -222,7 +236,3 @@ enum CommandeStatus {
   ANNULEE_PAR_PHARMACIE
   ANNULEE_PAR_LIVREUR
 }
-
-
-
-
