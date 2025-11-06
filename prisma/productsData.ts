@@ -29,12 +29,7 @@ export const productsData: ProductSeed[] = [
     prix: 800,
     category: "MEDICAMENT",
   },
-  {
-    title: "Brufen (Ibuprofène 200mg)",
-    description: "Anti-inflammatoire non stéroïdien pour douleurs et fièvre",
-    prix: 1000,
-    category: "MEDICAMENT",
-  },
+
   {
     title: "Diclofenac (Dynapar / Voltarène / Diclo)",
     description: "Anti-inflammatoire (gel ou comprimés selon version)",
@@ -922,5 +917,103 @@ export const productsData: ProductSeed[] = [
       "Favorise la respiration et apaise les voies respiratoires avec huiles essentielles.",
     prix: 15000,
     category: "ORL",
+  },
+  {
+    title: "Vitamine C 500mg x60",
+    description: "Renforce les défenses immunitaires et réduit la fatigue.",
+    prix: 5500,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Vitamine D3 1000 UI x60",
+    description:
+      "Favorise la santé osseuse et le fonctionnement normal du système immunitaire.",
+    prix: 6000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Multivitamines Adultes x30",
+    description:
+      "Complément quotidien pour combler les carences nutritionnelles.",
+    prix: 8000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Omega 3 - Huile de Poisson x60 gélules",
+    description: "Soutient la santé cardiaque et cérébrale.",
+    prix: 12000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Magnésium 250mg x60",
+    description:
+      "Aide à réduire la fatigue et soutient le bon fonctionnement musculaire.",
+    prix: 7000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Zinc 25mg x60",
+    description:
+      "Renforce le système immunitaire et participe à la cicatrisation.",
+    prix: 6500,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Fer Fumarate 65mg x30",
+    description: "Complément pour prévenir et traiter l’anémie ferriprive.",
+    prix: 5000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Calcium + Vitamine D3 x60",
+    description: "Maintient des os et dents solides.",
+    prix: 9000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Vitamine B12 1000mcg x60",
+    description:
+      "Soutient la formation des globules rouges et l’énergie cellulaire.",
+    prix: 8500,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Probiotiques 10 milliards UFC x30",
+    description: "Favorise une flore intestinale saine et la digestion.",
+    prix: 12000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Coenzyme Q10 100mg x30",
+    description: "Soutient la santé cardiaque et l’énergie cellulaire.",
+    prix: 15000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Vitamine E 400 UI x30",
+    description:
+      "Antioxydant puissant pour protéger les cellules du stress oxydatif.",
+    prix: 7000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Complément Beauté Cheveux & Ongles",
+    description:
+      "Favorise la croissance et la force des cheveux et des ongles.",
+    prix: 9000,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Vitamine A 5000 UI x30",
+    description: "Contribue à la santé des yeux et du système immunitaire.",
+    prix: 6500,
+    category: "VITAMINES_SUPPLEMENTS",
+  },
+  {
+    title: "Complexe B-Complex x30",
+    description:
+      "Maintient le bon fonctionnement du système nerveux et réduit la fatigue.",
+    prix: 8500,
+    category: "VITAMINES_SUPPLEMENTS",
   },
 ];
