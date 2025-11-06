@@ -1,4 +1,5 @@
 //Supprimer un produit du panier
+//api/clientbackend/cart/item/[itemId]/route.ts
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";

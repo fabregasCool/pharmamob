@@ -3,6 +3,7 @@
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { seedProductsForPharmacie } from "../../../../../../prisma/seedProductsForPharmacie";
 
 const prisma = new PrismaClient();
 
@@ -68,6 +69,8 @@ export async function POST(req: Request) {
         commandes: true, // 🔥 renvoie une liste (même vide)
       },
     });
+    // Appeler le seed pour cette pharmacie (qui va créée les produits dans la pharmacie qui sont dans productData)
+    await seedProductsForPharmacie(pharmacie.id);
 
     // 6️⃣ Retourner la pharmacie créée
     return NextResponse.json({
@@ -79,7 +82,10 @@ export async function POST(req: Request) {
       },
     });
   } catch (err) {
-    console.error("❌ Erreur POST /api/pharmacie/create:", err);
+    console.error(
+      "❌ Erreur POST /api/pharmaciebackend/pharmacie/create:",
+      err
+    );
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
