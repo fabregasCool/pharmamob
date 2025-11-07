@@ -208,7 +208,7 @@ enum OrdonnanceStatut {
 
 enum BondecommandeStatut {
   ENVOYEE
-  EN_COURS
+  DEVIS_RECU
   PRET
   LIVREE
   ANNULEE
