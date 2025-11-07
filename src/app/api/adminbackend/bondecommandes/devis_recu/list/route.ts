@@ -1,5 +1,4 @@
-//api/clientbackend/ordonnances/envoyees/list/route.ts
-//Recupérer la liste des ordonnances envoyées
+// ✅ /api/adminbackend/bondecommandes/recu_devis/list/route.ts
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
@@ -28,48 +27,64 @@ export async function GET(req: Request) {
       );
     }
 
-    // 3️⃣ Retrouver l’utilisateur connecté
-    const user = await prisma.user.findUnique({
+    // 3️⃣ Vérifier que l’utilisateur est admin
+    const admin = await prisma.user.findUnique({
       where: { email: decoded.email },
+      select: { id: true, role: true },
     });
 
-    if (!user) {
+    if (!admin) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
         { status: 404 }
       );
     }
 
-    // 4️⃣ Récupérer toutes les ordonnances ENVOYEE de cet utilisateur (non supprimées)
-    const ordonnances = await prisma.ordonnance.findMany({
+    if (admin.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Accès refusé : réservé aux administrateurs" },
+        { status: 403 }
+      );
+    }
+
+    // 4️⃣ Récupérer toutes les bondecommandes avec statut DEVIS_RECU
+    const bondecommandes = await prisma.bondecommande.findMany({
       where: {
-        userId: user.id,
-        statut: "ENVOYEE",
-        deletedAt: null, // ✅ On filtre pour ne prendre que les ordonnances actives
+        statut: "DEVIS_RECU",
+        deletedAt: null,
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-      select: {
-        id: true,
-        imageUrl: true, // ✅ Inclure l’image
-        description: true,
-        statut: true,
-        createdAt: true,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        pharmacie: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
     });
 
-    // 5️⃣ Répondre avec les données
+    // 5️⃣ Répondre avec la liste complète
     return NextResponse.json(
       {
         success: true,
-        count: ordonnances.length,
-        ordonnances,
+        count: bondecommandes.length,
+        bondecommandes,
       },
       { status: 200 }
     );
   } catch (err) {
-    console.error("❌ Erreur GET /api/ordonnances/envoyees/list:", err);
+    console.error(
+      "❌ Erreur GET /api/adminbackend/bondecommandes/devis_recu/list:",
+      err
+    );
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
