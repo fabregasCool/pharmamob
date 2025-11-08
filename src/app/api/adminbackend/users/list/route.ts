@@ -55,7 +55,7 @@ export async function GET(req: Request) {
           },
         },
         client: true,
-        libreur: true,
+        livreur: true,
       },
       take: 200, // sécurité — limite par défaut (ajoute pagination propre plus bas)
     });
