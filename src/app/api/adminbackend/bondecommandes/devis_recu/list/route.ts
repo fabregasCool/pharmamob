@@ -1,4 +1,4 @@
-// ✅ /api/adminbackend/bondecommandes/recu_devis/list/route.ts
+// ✅ /api/adminbackend/bondecommandes/devis_recu/list/route.ts
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
