@@ -90,12 +90,42 @@ model Ordonnance {
   @@index([pharmacieId])
   @@index([statut])
 }
+model Commune {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  pharmacies  Pharmacie[]
+  livreurs  Livreur[]
+  clients  Client[]
+  createdAt   DateTime    @default(now())
+}
+
+model Livreur {
+  id        String     @id @default(cuid())
+  imageUrl  String?
+  communeId String
+  commune   Commune @relation(fields: [communeId], references: [id])
+  quartier  String?
+  userId    String     @unique
+  commandes Commande[]
+  user      User       @relation(fields: [userId], references: [id])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  communeId String
+  commune   Commune @relation(fields: [communeId], references: [id])
+  quartier  String?
+  phone     String?
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
 
 model Pharmacie {
   id             String          @id @default(cuid())
   name           String          @unique
-  ville          String?
-  commune        String?
+  communeId String
+  commune   Commune @relation(fields: [communeId], references: [id])
   quartier       String?
   phone          String?
   logo           String?
@@ -153,28 +183,7 @@ model Token {
   @@unique([email, token])
 }
 
-model Livreur {
-  id        String     @id @default(cuid())
-  imageUrl  String?
-  ville     String?
-  commune   String?
-  quartier  String?
-  userId    String     @unique
-  commandes Commande[]
-  user      User       @relation(fields: [userId], references: [id])
-}
 
-model Client {
-  id        String   @id @default(cuid())
-  adresse   String?
-  ville     String?
-  commune   String?
-  quartier  String?
-  phone     String?
-  userId    String   @unique
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-}
 
 model Commande {
   id                    String         @id @default(cuid())

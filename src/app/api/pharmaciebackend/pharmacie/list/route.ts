@@ -24,7 +24,7 @@ export async function GET(req: Request) {
       console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -36,6 +36,7 @@ export async function GET(req: Request) {
           include: {
             produits: true, // ✅ si tu veux récupérer les produits
             commandes: true, // ✅ si tu veux récupérer les commandes
+            commune: true, // 👈 AJOUTE ÇA
           },
         },
       },
@@ -44,7 +45,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 

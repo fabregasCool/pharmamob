@@ -13,8 +13,8 @@ export const usersData = [
     isVerified: true,
   },
   {
-    name: "Fabregas",
-    email: "fabregas@test.com",
+    name: "Pharmacie Express",
+    email: "pharmacie@test.com",
     phone: "+2250202020202",
     passwordHash: password,
     role: Role.PHARMACIE,
@@ -29,7 +29,7 @@ export const usersData = [
     isVerified: true,
   },
   {
-    name: "Client Test",
+    name: "Client Tester",
     email: "client@test.com",
     phone: "+2250606060606",
     passwordHash: password,

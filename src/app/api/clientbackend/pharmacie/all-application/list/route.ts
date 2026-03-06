@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -37,33 +37,48 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
     if (user.role !== "CLIENT") {
       return NextResponse.json(
         { error: "Accès réservé aux clients" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     // 4️⃣ Récupérer toutes les pharmacies de l'application
+
     const pharmacies = await prisma.pharmacie.findMany({
       include: {
-        produits: true, // si tu veux afficher les produits liés
-        commandes: true, // si tu veux afficher les commandes liées
+        produits: true,
+        commandes: true,
       },
-
       orderBy: {
-        createdAt: "desc",
+        commune: "asc", // 👈 on trie d'abord par commune
       },
     });
 
-    // 5️⃣ Retourner la réponse
+    // 🔥 Grouper par commune
+    const groupedByCommune = pharmacies.reduce(
+      (acc, pharmacie) => {
+        const commune = pharmacie.commune || "Non définie";
+
+        if (!acc[commune]) {
+          acc[commune] = [];
+        }
+
+        acc[commune].push(pharmacie);
+
+        return acc;
+      },
+      {} as Record<string, typeof pharmacies>,
+    );
+
     return NextResponse.json({
       success: true,
-      pharmacies,
+      pharmacies: groupedByCommune,
     });
   } catch (err) {
     console.error("❌ Erreur GET /api/pharmacie/list:", err);

@@ -1,6 +1,5 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-// prisma/seed.ts
 const client_1 = require("@prisma/client");
 const usersData_1 = require("./usersData");
 const productsData_1 = require("./productsData");
@@ -14,35 +13,53 @@ async function main() {
     await prisma.livreur.deleteMany();
     await prisma.client.deleteMany();
     await prisma.user.deleteMany();
+    await prisma.commune.deleteMany();
+    console.log("🏙 Création des communes d'Abidjan...");
+    const communesAbidjan = [
+        "Abobo",
+        "Adjamé",
+        "Cocody",
+        "Koumassi",
+        "Marcory",
+        "Plateau",
+        "Port-Bouët",
+        "Treichville",
+        "Attécoubé",
+        "Yopougon",
+        "Dabou",
+        "Anyama",
+        "Songon",
+    ];
+    // ✅ Type correct pour TypeScript
+    const communesMap = {};
+    for (const name of communesAbidjan) {
+        const commune = await prisma.commune.create({ data: { name } });
+        communesMap[name] = commune; // on garde les ids pour le connect
+    }
     console.log("👤 Création des utilisateurs...");
     for (const user of usersData_1.usersData) {
         const createdUser = await prisma.user.create({ data: user });
         if (createdUser.role === client_1.Role.PHARMACIE) {
-            // 👉 Créer la pharmacie liée
+            const communeName = "Yopougon";
             const pharmacie = await prisma.pharmacie.create({
                 data: {
                     name: `${createdUser.name}`,
-                    ville: "Abidjan",
-                    commune: "Yopougon",
+                    commune: { connect: { id: communesMap[communeName].id } },
                     quartier: "Millionnaire",
                     phone: "+2250707070707",
-                    userId: createdUser.id,
+                    user: { connect: { id: createdUser.id } },
                 },
             });
             console.log(`🏪 Pharmacie créée pour ${createdUser.email}`);
-            // 👉 Ajouter les produits de test à la pharmacie
             for (const product of productsData_1.productsData) {
-                // Vérifie si la catégorie existe déjà
                 let category = await prisma.category.findUnique({
                     where: { name: product.category },
                 });
-                // Si elle n'existe pas, on la crée
                 if (!category) {
                     category = await prisma.category.create({
                         data: { name: product.category },
                     });
                 }
-                // Crée le produit avec la clé étrangère categoryId
                 await prisma.produit.create({
                     data: {
                         title: product.title,
@@ -50,34 +67,30 @@ async function main() {
                         imageUrl: (_b = product.imageUrl) !== null && _b !== void 0 ? _b : null,
                         prix: product.prix,
                         pharmacieId: pharmacie.id,
-                        categoryId: category.id, // ✅ clé étrangère valide
+                        categoryId: category.id,
                     },
                 });
             }
-            console.log(`💊 Produits ajoutés à la pharmacie ${createdUser.name}`);
         }
         if (createdUser.role === client_1.Role.LIVREUR) {
-            // 👉 Créer le livreur lié
+            const communeName = "Koumassi";
             await prisma.livreur.create({
                 data: {
-                    userId: createdUser.id,
-                    ville: "Abidjan",
-                    commune: "Koumassi",
+                    user: { connect: { id: createdUser.id } },
+                    commune: { connect: { id: communesMap[communeName].id } },
                     quartier: "Divo",
                 },
             });
             console.log(`🚚 Livreur créé pour ${createdUser.email}`);
         }
         if (createdUser.role === client_1.Role.CLIENT) {
-            // 👉 Créer le client lié
+            const communeName = "Cocody";
             await prisma.client.create({
                 data: {
-                    adresse: "Cocody Angré 8ème Tranche",
-                    ville: "Abidjan",
-                    commune: "Cocody",
+                    user: { connect: { id: createdUser.id } },
+                    commune: { connect: { id: communesMap[communeName].id } },
                     quartier: "Angré",
                     phone: "+2250101010101",
-                    userId: createdUser.id,
                 },
             });
             console.log(`🧑‍💻 Client créé pour ${createdUser.email}`);
