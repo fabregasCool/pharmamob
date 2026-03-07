@@ -12,10 +12,7 @@ export async function GET(req: Request) {
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { error: "Token manquant" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Token manquant" }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
@@ -24,16 +21,13 @@ export async function GET(req: Request) {
     let decoded: { email: string };
 
     try {
-      decoded = jwt.verify(
-        token,
-        process.env.JWT_SECRET!
-      ) as { email: string };
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
     } catch (err) {
       console.error("Erreur de vérification du token:", err);
 
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -45,7 +39,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -56,7 +50,7 @@ export async function GET(req: Request) {
       },
     });
 
-    // 5️⃣ Retourner la réponse
+    // 5️⃣ Retourner la réponse finale
     return NextResponse.json({
       success: true,
       communes,
@@ -64,9 +58,6 @@ export async function GET(req: Request) {
   } catch (err) {
     console.error("❌ Erreur GET /api/pharmaciebackend/communes:", err);
 
-    return NextResponse.json(
-      { error: "Erreur serveur" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
