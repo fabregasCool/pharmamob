@@ -45,7 +45,6 @@ export async function GET(req: Request) {
           select: {
             id: true,
             name: true,
-
             commune: true,
             produits: { select: { id: true, title: true, prix: true } }, // si tu veux un aperçu
           },
