@@ -18,17 +18,17 @@ async function main() {
   const communesAbidjan = [
     "Abobo",
     "Adjamé",
+    "Anyama",
+    "Attécoubé",
+    "Bingerville",
     "Cocody",
     "Koumassi",
     "Marcory",
     "Plateau",
     "Port-Bouët",
-    "Treichville",
-    "Attécoubé",
-    "Yopougon",
-    "Dabou",
-    "Anyama",
     "Songon",
+    "Treichville",
+    "Yopougon",
   ];
 
   // ✅ Type correct pour TypeScript

@@ -16,7 +16,10 @@ export async function GET(req: Request) {
     let decoded: { email: string; role?: string };
 
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string; role?: string };
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+        email: string;
+        role?: string;
+      };
     } catch {
       return NextResponse.json({ error: "Token invalide" }, { status: 401 });
     }
@@ -27,7 +30,10 @@ export async function GET(req: Request) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Utilisateur introuvable" },
+        { status: 404 },
+      );
     }
 
     // 🛒 Récupération du panier avec les produits et leur pharmacie
@@ -38,7 +44,7 @@ export async function GET(req: Request) {
           include: {
             produit: {
               include: {
-                pharmacie: { select: { id: true, name: true, ville: true } }, // 💊 Affiche infos pharmacie
+                pharmacie: { select: { id: true, name: true, commune: true } }, // 💊 Affiche infos pharmacie
                 category: { select: { id: true, name: true } }, // 🏷️ Optionnel : catégorie du produit
               },
             },
@@ -54,11 +60,14 @@ export async function GET(req: Request) {
         success: true,
         cart: cart ?? { id: null, items: [] },
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err) {
     console.error("❌ Erreur GET /api/cart:", err);
-    return NextResponse.json({ error: "Erreur interne du serveur" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erreur interne du serveur" },
+      { status: 500 },
+    );
   } finally {
     await prisma.$disconnect();
   }

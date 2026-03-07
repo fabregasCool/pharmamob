@@ -49,36 +49,21 @@ export async function GET(req: Request) {
     }
 
     // 4️⃣ Récupérer toutes les pharmacies de l'application
-
     const pharmacies = await prisma.pharmacie.findMany({
       include: {
-        produits: true,
-        commandes: true,
+        produits: true, // si tu veux afficher les produits liés
+        commandes: true, // si tu veux afficher les commandes liées
       },
+
       orderBy: {
-        commune: "asc", // 👈 on trie d'abord par commune
+        createdAt: "desc",
       },
     });
 
-    // 🔥 Grouper par commune
-    const groupedByCommune = pharmacies.reduce(
-      (acc, pharmacie) => {
-        const commune = pharmacie.commune || "Non définie";
-
-        if (!acc[commune]) {
-          acc[commune] = [];
-        }
-
-        acc[commune].push(pharmacie);
-
-        return acc;
-      },
-      {} as Record<string, typeof pharmacies>,
-    );
-
+    // 5️⃣ Retourner la réponse
     return NextResponse.json({
       success: true,
-      pharmacies: groupedByCommune,
+      pharmacies,
     });
   } catch (err) {
     console.error("❌ Erreur GET /api/pharmacie/list:", err);

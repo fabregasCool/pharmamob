@@ -67,7 +67,7 @@ export async function GET(
         ],
       },
       include: {
-        pharmacie: { select: { name: true, ville: true } },
+        pharmacie: { select: { name: true, commune: true } },
         category: true,
       },
       orderBy: { createdAt: "desc" },

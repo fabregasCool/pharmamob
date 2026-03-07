@@ -17,7 +17,10 @@ export async function GET(req: Request) {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
     } catch {
-      return NextResponse.json({ error: "Token invalide ou expiré" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Token invalide ou expiré" },
+        { status: 401 },
+      );
     }
 
     // Vérifier admin
@@ -25,8 +28,13 @@ export async function GET(req: Request) {
       where: { email: decoded.email },
       select: { id: true, role: true },
     });
-    if (!admin) return NextResponse.json({ error: "Utilisateur introuvable" }, { status: 404 });
-    if (admin.role !== "ADMIN") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    if (!admin)
+      return NextResponse.json(
+        { error: "Utilisateur introuvable" },
+        { status: 404 },
+      );
+    if (admin.role !== "ADMIN")
+      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
     // Requête efficace : on récupère les users + relations clés + compteurs
     // NB: on limite les produits renvoyés aux champs nécessaires (id, title, prix)
@@ -37,7 +45,7 @@ export async function GET(req: Request) {
           select: {
             id: true,
             name: true,
-            ville: true,
+
             commune: true,
             produits: { select: { id: true, title: true, prix: true } }, // si tu veux un aperçu
           },
@@ -71,15 +79,22 @@ export async function GET(req: Request) {
       createdAt: u.createdAt.toISOString(),
       updatedAt: u.updatedAt?.toISOString(),
       pharmaciesCount: u.pharmacies.length,
-      produitsCount: u.pharmacies.reduce((acc, ph) => acc + (ph.produits?.length ?? 0), 0),
+      produitsCount: u.pharmacies.reduce(
+        (acc, ph) => acc + (ph.produits?.length ?? 0),
+        0,
+      ),
       ordonnancesCount: u._count?.ordonnances ?? 0,
       bondecommandesCount: u._count?.bondecommandes ?? 0,
       pharmacies: u.pharmacies.map((ph) => ({
         id: ph.id,
         name: ph.name,
-        ville: ph.ville,
         commune: ph.commune,
-        produits: ph.produits?.map((p) => ({ id: p.id, title: p.title, prix: p.prix })) ?? [],
+        produits:
+          ph.produits?.map((p) => ({
+            id: p.id,
+            title: p.title,
+            prix: p.prix,
+          })) ?? [],
         produitsCount: ph.produits?.length ?? 0,
       })),
       cart: u.cart ? { id: u.cart.id } : null,
@@ -87,7 +102,10 @@ export async function GET(req: Request) {
       livreur: u.livreur ?? null,
     }));
 
-    return NextResponse.json({ success: true, count: usersWithCounts.length, users: usersWithCounts }, { status: 200 });
+    return NextResponse.json(
+      { success: true, count: usersWithCounts.length, users: usersWithCounts },
+      { status: 200 },
+    );
   } catch (err) {
     console.error("❌ Erreur /api/adminbackend/users/list :", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });

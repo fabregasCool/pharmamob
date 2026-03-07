@@ -1,5 +1,6 @@
 // src/app/api/pharmacie/create/route.ts
-//Créer une pharmacie
+// Créer une pharmacie
+
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
@@ -9,27 +10,29 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-    // 1️⃣ Vérifier le header Authorization
+
+    // 1️⃣ Vérifier Authorization
     const authHeader = req.headers.get("Authorization");
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Token manquant" }, { status: 401 });
     }
 
     const token = authHeader.split(" ")[1];
 
-    // 2️⃣ Vérifier et décoder le JWT
+    // 2️⃣ Vérifier JWT
     let decoded: { email: string };
+
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
-    } catch (err) {
-      console.error("Erreur de vérification du token:", err);
+    } catch {
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
         { status: 401 }
       );
     }
 
-    // 3️⃣ Retrouver l’utilisateur
+    // 3️⃣ Récupérer l'utilisateur
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
     });
@@ -41,9 +44,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4️⃣ Récupérer les données envoyées dans le body
+    // 4️⃣ Body
     const body = await req.json();
-    const { name, ville, commune, quartier, phone, logo, slogan } = body;
+
+    const {
+      name,
+      communeId,
+      quartier,
+      phone,
+      logo,
+      slogan
+    } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -52,27 +63,47 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5️⃣ Créer la pharmacie liée à l’utilisateur
+    if (!communeId) {
+      return NextResponse.json(
+        { error: "communeId est obligatoire" },
+        { status: 400 }
+      );
+    }
+
+    // 5️⃣ Vérifier que la commune existe
+    const commune = await prisma.commune.findUnique({
+      where: { id: communeId }
+    });
+
+    if (!commune) {
+      return NextResponse.json(
+        { error: "Commune introuvable" },
+        { status: 404 }
+      );
+    }
+
+    // 6️⃣ Créer la pharmacie
     const pharmacie = await prisma.pharmacie.create({
       data: {
         name,
-        ville,
-        commune,
+        communeId,
         quartier,
         phone,
         logo,
         slogan,
-        userId: user.id, // ✅ liaison à l’utilisateur connecté
+        userId: user.id,
       },
       include: {
-        produits: true, // 🔥 renvoie une liste (même vide)
-        commandes: true, // 🔥 renvoie une liste (même vide)
+        commune: true,
+        produits: true,
+        commandes: true,
       },
     });
-    // Appeler le seed pour cette pharmacie (qui va créée les produits dans la pharmacie qui sont dans productData)
+
+    // 7️⃣ Seeder les produits
     await seedProductsForPharmacie(pharmacie.id);
 
-    // 6️⃣ Retourner la pharmacie créée
+    // 8️⃣ Réponse
     return NextResponse.json({
       success: true,
       pharmacie: {
@@ -81,11 +112,13 @@ export async function POST(req: Request) {
         commandes: pharmacie.commandes ?? [],
       },
     });
+
   } catch (err) {
-    console.error(
-      "❌ Erreur POST /api/pharmaciebackend/pharmacie/create:",
-      err
+    console.error("❌ Erreur POST /api/pharmacie/create:", err);
+
+    return NextResponse.json(
+      { error: "Erreur serveur" },
+      { status: 500 }
     );
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
