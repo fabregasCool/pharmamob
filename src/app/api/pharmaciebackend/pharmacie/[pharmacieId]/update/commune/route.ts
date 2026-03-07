@@ -1,4 +1,4 @@
-// src/app/api/pharmacie/[pharmacieId]/update/commune/route.ts
+//app/api/pharmaciebackend/pharmacie[pharmacieId]/update/commune
 
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
@@ -13,12 +13,12 @@ interface JwtPayload {
 
 export async function PATCH(
   req: Request,
-  context: { params: Promise<{ pharmacieId: string }> },
+  { params }: { params: { pharmacieId: string } },
 ) {
   try {
-    const { pharmacieId } = await context.params;
+    const { pharmacieId } = params;
 
-    // 1️⃣ Vérifier le token
+    // 1️⃣ Vérifier le header Authorization
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -27,15 +27,19 @@ export async function PATCH(
 
     const token = authHeader.split(" ")[1];
 
+    // 2️⃣ Décoder le JWT
     let decoded: JwtPayload;
 
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
     } catch {
-      return NextResponse.json({ error: "Token invalide" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Token invalide ou expiré" },
+        { status: 401 },
+      );
     }
 
-    // 2️⃣ Vérifier utilisateur
+    // 3️⃣ Vérifier utilisateur
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
     });
@@ -54,7 +58,7 @@ export async function PATCH(
       );
     }
 
-    // 3️⃣ Vérifier pharmacie
+    // 4️⃣ Vérifier pharmacie
     const pharmacie = await prisma.pharmacie.findUnique({
       where: { id: pharmacieId },
     });
@@ -73,7 +77,7 @@ export async function PATCH(
       );
     }
 
-    // 4️⃣ Body
+    // 5️⃣ Body
     const body = await req.json();
     const { communeId } = body;
 
@@ -84,7 +88,7 @@ export async function PATCH(
       );
     }
 
-    // 5️⃣ Vérifier que la commune existe
+    // 6️⃣ Vérifier commune
     const commune = await prisma.commune.findUnique({
       where: { id: communeId },
     });
@@ -96,18 +100,20 @@ export async function PATCH(
       );
     }
 
-    // 6️⃣ Update
+    // 7️⃣ Mise à jour
     const updatedPharmacie = await prisma.pharmacie.update({
       where: { id: pharmacieId },
       data: {
-        communeId,
+        communeId: communeId,
       },
       include: {
         commune: true,
       },
     });
 
+    // 8️⃣ Réponse
     return NextResponse.json({
+      success: true,
       message: "Commune mise à jour avec succès ✅",
       pharmacie: updatedPharmacie,
     });
