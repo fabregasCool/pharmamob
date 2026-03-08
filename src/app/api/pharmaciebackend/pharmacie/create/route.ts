@@ -10,7 +10,6 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-
     // 1️⃣ Vérifier Authorization
     const authHeader = req.headers.get("Authorization");
 
@@ -28,7 +27,7 @@ export async function POST(req: Request) {
     } catch {
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -40,45 +39,54 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 }
+        { status: 404 },
+      );
+    }
+    if (user.role !== "PHARMACIE") {
+      return NextResponse.json(
+        { error: "Accès réservé aux comptes pharmacie" },
+        { status: 403 },
       );
     }
 
     // 4️⃣ Body
     const body = await req.json();
 
-    const {
-      name,
-      communeId,
-      quartier,
-      phone,
-      logo,
-      slogan
-    } = body;
+    const { name, communeId, quartier, phone, logo, slogan } = body;
 
     if (!name) {
       return NextResponse.json(
         { error: "Le nom de la pharmacie est obligatoire" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!communeId) {
       return NextResponse.json(
         { error: "communeId est obligatoire" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // 5️⃣ Vérifier que la commune existe
     const commune = await prisma.commune.findUnique({
-      where: { id: communeId }
+      where: { id: communeId },
     });
 
     if (!commune) {
       return NextResponse.json(
         { error: "Commune introuvable" },
-        { status: 404 }
+        { status: 404 },
+      );
+    }
+    const existingPharmacie = await prisma.pharmacie.findUnique({
+      where: { name },
+    });
+
+    if (existingPharmacie) {
+      return NextResponse.json(
+        { error: "Une pharmacie avec ce nom existe déjà" },
+        { status: 400 },
       );
     }
 
@@ -95,8 +103,6 @@ export async function POST(req: Request) {
       },
       include: {
         commune: true,
-        produits: true,
-        commandes: true,
       },
     });
 
@@ -106,19 +112,11 @@ export async function POST(req: Request) {
     // 8️⃣ Réponse
     return NextResponse.json({
       success: true,
-      pharmacie: {
-        ...pharmacie,
-        produits: pharmacie.produits ?? [],
-        commandes: pharmacie.commandes ?? [],
-      },
+      pharmacie,
     });
-
   } catch (err) {
     console.error("❌ Erreur POST /api/pharmacie/create:", err);
 
-    return NextResponse.json(
-      { error: "Erreur serveur" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
