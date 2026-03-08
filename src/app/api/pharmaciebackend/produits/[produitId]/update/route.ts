@@ -1,3 +1,4 @@
+// src/app/api/pharmaciebackend/produits/[produitId]/update
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
