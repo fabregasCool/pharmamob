@@ -1,10 +1,24 @@
-//api/clientbackend/ordonnances/envoyees/create/route.ts
-//Il permet d'envoyer une ordonnance
+// api/clientbackend/bondecommandes/envoyees/create/route.ts
+// Il permet d'envoyer une bon de commande
+
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
+
+// 📌 Validation du corps de la requête
+const bonDeCommandeSchema = z.object({
+  imageUrl: z.string().url("L’URL de l’image est invalide"),
+  description: z.string().optional(),
+  securite_sociale: z
+    .string()
+    .regex(
+      /^\d{13}$/,
+      "Le numéro de sécurité sociale doit contenir exactement 13 chiffres"
+    ),
+});
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +38,7 @@ export async function POST(req: Request) {
       console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -36,64 +50,44 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
-    // 4️⃣ Lire le corps de la requête
+    // 4️⃣ Lire et valider le corps de la requête
     const body = await req.json();
-    const { imageUrl, description, pharmacieId } = body;
+    const parsed = bonDeCommandeSchema.safeParse(body);
 
-    if (!imageUrl) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "L’image est obligatoire" },
-        { status: 400 },
-      );
-    }
-    if (!pharmacieId) {
-      return NextResponse.json(
-        { error: "La pharmacie est obligatoire" },
-        { status: 400 },
-      );
-    }
-    // 5️⃣ Vérifier que la pharmacie existe
-    const pharmacie = await prisma.pharmacie.findUnique({
-      where: { id: pharmacieId },
-    });
-
-    if (!pharmacie) {
-      return NextResponse.json(
-        { error: "Pharmacie introuvable" },
-        { status: 404 },
+        { error: parsed.error.issues[0].message },
+        { status: 400 }
       );
     }
 
-    // 6️⃣ Créer l’ordonnance
-    const ordonnance = await prisma.ordonnance.create({
+    const { imageUrl, description, securite_sociale } = parsed.data;
+
+    // 5️⃣ Créer la bon de commande dans la base
+    const bondecommande = await prisma.bondecommande.create({
       data: {
+        userId: user.id,
         imageUrl,
         description: description ?? null,
-        userId: user.id,
-        pharmacieId: pharmacieId,
-        statut: "ENVOYEE",
-      },
-      include: {
-        pharmacie: true,
+        securite_sociale,
       },
     });
 
-    // 7️⃣ Réponse
+    // 6️⃣ Retourner la réponse
     return NextResponse.json(
       {
         success: true,
-        message: "Ordonnance envoyée à la pharmacie",
-        ordonnance,
+        message: "Bon de commande enregistrée avec succès",
+        bondecommande,
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (err) {
-    console.error("❌ Erreur POST ordonnance:", err);
-
+    console.error("❌ Erreur POST /api/bondecommandes:", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

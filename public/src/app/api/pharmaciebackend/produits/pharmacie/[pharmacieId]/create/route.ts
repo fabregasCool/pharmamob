@@ -1,5 +1,5 @@
-//api/clientbackend/ordonnances/envoyees/create/route.ts
-//Il permet d'envoyer une ordonnance
+//src/app/api/pharmaciebackend/produits/pharmacie/[pharmacieId]/create/route.ts
+//Créer un produit dans une pharmacie
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
-    // 1️⃣ Vérifier la présence du header Authorization
+    // 1️⃣ Vérifier le header Authorization
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Token manquant" }, { status: 401 });
@@ -22,13 +22,14 @@ export async function POST(req: Request) {
       decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
     } catch (err) {
       console.error("Erreur de vérification du token:", err);
+
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
-    // 3️⃣ Retrouver l’utilisateur connecté via son email
+    // 3️⃣ Retrouver l’utilisateur
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
     });
@@ -36,27 +37,29 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
     // 4️⃣ Lire le corps de la requête
     const body = await req.json();
-    const { imageUrl, description, pharmacieId } = body;
+    const {
+      title,
+      description,
+      imageUrl,
+      prix,
+      pharmacieId,
+      categoryId, // ✅ on reçoit maintenant l'id de la catégorie
+    } = body;
 
-    if (!imageUrl) {
+    if (!title || !prix || !pharmacieId || !categoryId) {
       return NextResponse.json(
-        { error: "L’image est obligatoire" },
-        { status: 400 },
+        { error: "Champs requis manquants" },
+        { status: 400 }
       );
     }
-    if (!pharmacieId) {
-      return NextResponse.json(
-        { error: "La pharmacie est obligatoire" },
-        { status: 400 },
-      );
-    }
-    // 5️⃣ Vérifier que la pharmacie existe
+
+    // 5️⃣ Vérifier si la pharmacie existe
     const pharmacie = await prisma.pharmacie.findUnique({
       where: { id: pharmacieId },
     });
@@ -64,36 +67,45 @@ export async function POST(req: Request) {
     if (!pharmacie) {
       return NextResponse.json(
         { error: "Pharmacie introuvable" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
-    // 6️⃣ Créer l’ordonnance
-    const ordonnance = await prisma.ordonnance.create({
+    // 6️⃣ Vérifier si la catégorie existe
+    const category = await prisma.category.findUnique({
+      where: { id: categoryId },
+    });
+
+    if (!category) {
+      return NextResponse.json(
+        { error: "Catégorie introuvable" },
+        { status: 404 }
+      );
+    }
+
+    // 7️⃣ Créer le produit
+    const produit = await prisma.produit.create({
       data: {
+        title,
+        description,
         imageUrl,
-        description: description ?? null,
-        userId: user.id,
-        pharmacieId: pharmacieId,
-        statut: "ENVOYEE",
+        prix,
+        pharmacieId,
+        categoryId, // ✅ liaison à la catégorie
       },
       include: {
+        category: true,
         pharmacie: true,
       },
     });
 
-    // 7️⃣ Réponse
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Ordonnance envoyée à la pharmacie",
-        ordonnance,
-      },
-      { status: 201 },
-    );
+    // 8️⃣ Retourner la réponse
+    return NextResponse.json({
+      success: true,
+      produit,
+    });
   } catch (err) {
-    console.error("❌ Erreur POST ordonnance:", err);
-
+    console.error("❌ Erreur POST /api/pharmaciebackend/produits/create:", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }

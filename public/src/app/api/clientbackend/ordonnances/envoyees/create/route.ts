@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -36,64 +36,41 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
     // 4️⃣ Lire le corps de la requête
     const body = await req.json();
-    const { imageUrl, description, pharmacieId } = body;
+    const { imageUrl, description } = body;
 
     if (!imageUrl) {
       return NextResponse.json(
         { error: "L’image est obligatoire" },
-        { status: 400 },
-      );
-    }
-    if (!pharmacieId) {
-      return NextResponse.json(
-        { error: "La pharmacie est obligatoire" },
-        { status: 400 },
-      );
-    }
-    // 5️⃣ Vérifier que la pharmacie existe
-    const pharmacie = await prisma.pharmacie.findUnique({
-      where: { id: pharmacieId },
-    });
-
-    if (!pharmacie) {
-      return NextResponse.json(
-        { error: "Pharmacie introuvable" },
-        { status: 404 },
+        { status: 400 }
       );
     }
 
-    // 6️⃣ Créer l’ordonnance
+    // 5️⃣ Créer l’ordonnance dans la base
     const ordonnance = await prisma.ordonnance.create({
       data: {
+        userId: user.id,
         imageUrl,
         description: description ?? null,
-        userId: user.id,
-        pharmacieId: pharmacieId,
-        statut: "ENVOYEE",
-      },
-      include: {
-        pharmacie: true,
       },
     });
 
-    // 7️⃣ Réponse
+    // 6️⃣ Retourner la réponse
     return NextResponse.json(
       {
         success: true,
-        message: "Ordonnance envoyée à la pharmacie",
+        message: "Ordonnance enregistrée avec succès",
         ordonnance,
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (err) {
-    console.error("❌ Erreur POST ordonnance:", err);
-
+    console.error("❌ Erreur POST /api/ordonnances:", err);
     return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
