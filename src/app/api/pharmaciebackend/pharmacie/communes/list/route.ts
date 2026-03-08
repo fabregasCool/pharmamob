@@ -48,6 +48,11 @@ export async function GET(req: Request) {
       orderBy: {
         name: "asc",
       },
+      include: {
+        pharmacies: true,
+        livreurs: true,
+        clients: true,
+      },
     });
 
     // 5️⃣ Retourner la réponse finale
