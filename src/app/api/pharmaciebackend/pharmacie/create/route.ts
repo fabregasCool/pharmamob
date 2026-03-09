@@ -4,7 +4,7 @@
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { seedProductsForPharmacie } from "../../../../../../prisma/seedProductsForPharmacie";
+import { seedProductsForPharmacie } from "@/../prisma/seedProductsForPharmacie";
 
 const prisma = new PrismaClient();
 
