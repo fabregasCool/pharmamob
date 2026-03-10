@@ -24,7 +24,7 @@ export async function GET(req: Request) {
       console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -56,6 +56,15 @@ export async function GET(req: Request) {
         description: true,
         statut: true,
         createdAt: true,
+
+        pharmacie: {
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            quartier: true,
+          },
+        },
       },
     });
 
@@ -66,7 +75,7 @@ export async function GET(req: Request) {
         count: ordonnances.length,
         ordonnances,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (err) {
     console.error("❌ Erreur GET /api/ordonnances/envoyees/list:", err);
