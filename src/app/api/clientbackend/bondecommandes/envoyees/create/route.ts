@@ -16,8 +16,9 @@ const bonDeCommandeSchema = z.object({
     .string()
     .regex(
       /^\d{13}$/,
-      "Le numéro de sécurité sociale doit contenir exactement 13 chiffres"
+      "Le numéro de sécurité sociale doit contenir exactement 13 chiffres",
     ),
+  pharmacieId: z.string(),
 });
 
 export async function POST(req: Request) {
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       console.error("Erreur de vérification du token:", err);
       return NextResponse.json(
         { error: "Token invalide ou expiré" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Utilisateur introuvable" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -61,11 +62,37 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0].message },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { imageUrl, description, securite_sociale } = parsed.data;
+    const { imageUrl, description, securite_sociale, pharmacieId } =
+      parsed.data;
+
+    if (!imageUrl) {
+      return NextResponse.json(
+        { error: "L’image est obligatoire" },
+        { status: 400 },
+      );
+    }
+    if (!pharmacieId) {
+      return NextResponse.json(
+        { error: "La pharmacie est obligatoire" },
+        { status: 400 },
+      );
+    }
+
+    // 5️⃣ Vérifier que la pharmacie existe
+    const pharmacie = await prisma.pharmacie.findUnique({
+      where: { id: pharmacieId },
+    });
+
+    if (!pharmacie) {
+      return NextResponse.json(
+        { error: "Pharmacie introuvable" },
+        { status: 404 },
+      );
+    }
 
     // 5️⃣ Créer la bon de commande dans la base
     const bondecommande = await prisma.bondecommande.create({
@@ -74,6 +101,11 @@ export async function POST(req: Request) {
         imageUrl,
         description: description ?? null,
         securite_sociale,
+        pharmacieId: pharmacieId,
+        statut: "ENVOYEE",
+      },
+      include: {
+        pharmacie: true,
       },
     });
 
@@ -84,7 +116,7 @@ export async function POST(req: Request) {
         message: "Bon de commande enregistrée avec succès",
         bondecommande,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (err) {
     console.error("❌ Erreur POST /api/bondecommandes:", err);
