@@ -63,6 +63,12 @@ export async function GET(req: Request) {
             name: true,
             phone: true,
             quartier: true,
+            // ✅ commune ajoutée
+            commune: {
+              select: {
+                name: true,
+              },
+            },
           },
         },
       },
