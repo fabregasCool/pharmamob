@@ -61,6 +61,7 @@ model Produit {
   categoryId  String
   cartItems   CartItem[]
   commandes   Commande[]
+  ordonnanceItems OrdonnanceItem[]   // 👈 AJOUTER
   category    Category   @relation(fields: [categoryId], references: [id])
   pharmacie   Pharmacie  @relation(fields: [pharmacieId], references: [id])
 }
@@ -83,12 +84,30 @@ model Ordonnance {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   deletedAt   DateTime?
+
+  items       OrdonnanceItem[]
+
   pharmacie   Pharmacie?       @relation(fields: [pharmacieId], references: [id])
   user        User             @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([pharmacieId])
   @@index([statut])
+}
+// OrdonnanceItem est reservé pour les ordanances envoyés afin de calculer le prix des produits
+model OrdonnanceItem {
+  id            String   @id @default(cuid())
+  ordonnanceId  String
+  produitId     String?  // si le produit existe déjà dans la base
+  nomProduit    String   // si le produit vient seulement de l’ordonnance
+  quantite      Int
+  prixUnitaire  Int
+  createdAt     DateTime @default(now())
+
+  ordonnance Ordonnance @relation(fields: [ordonnanceId], references: [id])
+  produit    Produit?   @relation(fields: [produitId], references: [id])
+
+  @@index([ordonnanceId])
 }
 model Commune {
   id          String      @id @default(cuid())
@@ -210,6 +229,7 @@ model Commande {
 enum OrdonnanceStatut {
   ENVOYEE
   DEVIS_RECU
+  VALIDEE_PAR_CLIENT
   PRET
   LIVREE
   ANNULEE

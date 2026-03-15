@@ -79,6 +79,7 @@ export async function POST(req: Request) {
       },
       include: {
         pharmacie: true,
+        items: true,
       },
     });
 
