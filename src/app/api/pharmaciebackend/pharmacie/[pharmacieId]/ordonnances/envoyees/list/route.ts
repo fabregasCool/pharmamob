@@ -1,17 +1,17 @@
 // ✅ /api/pharmaciebackend/pharmacie/[pharmacieId]/ordonnances/envoyees/list/route.ts
 //Il affiche tous les ordonnancesenvoyées par les client à cette pharmacie
 import { PrismaClient } from "@prisma/client";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
 export async function GET(
-  req: Request,
-  { params }: { params: { pharmacieId: string } },
+  req: NextRequest,
+  context: { params: Promise<{ pharmacieId: string }> },
 ) {
   try {
-    const { pharmacieId } = params;
+    const { pharmacieId } = await context.params;
 
     // 1️⃣ Vérifier le token
     const authHeader = req.headers.get("Authorization");
@@ -65,7 +65,7 @@ export async function GET(
       );
     }
 
-    // 5️⃣ Récupérer les ordonnances envoyées à cette pharmacie
+    // 5️⃣ Récupérer les ordonnances envoyées
     const ordonnances = await prisma.ordonnance.findMany({
       where: {
         pharmacieId: pharmacieId,
@@ -83,11 +83,10 @@ export async function GET(
             phone: true,
           },
         },
-        items: true, // utile quand le devis sera créé
+        items: true,
       },
     });
 
-    // 6️⃣ Réponse
     return NextResponse.json(
       {
         success: true,
