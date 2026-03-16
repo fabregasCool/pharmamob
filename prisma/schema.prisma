@@ -229,7 +229,7 @@ model Commande {
 enum OrdonnanceStatut {
   ENVOYEE
   DEVIS_RECU
-  VALIDEE_PAR_CLIENT
+  DEVIS_VALIDEE_PAR_CLIENT
   PRET
   LIVREE
   ANNULEE
