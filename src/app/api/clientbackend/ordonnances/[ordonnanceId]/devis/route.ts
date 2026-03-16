@@ -1,5 +1,5 @@
-//app/api/clientbackend/ordonnances/[ordonnaceId]/devis/route.ts
-//Ici on recupère le trix total du devis de l'ordonnance aussi avec les prix de chaque produit de l'ordonnance
+//app/api/clientbackend/ordonnances/[ordonnanceId]/devis/route.ts
+//Ici on recupère  les prix et quantité de chaque produit de l'ordonnance
 import { PrismaClient } from "@prisma/client";
 import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
