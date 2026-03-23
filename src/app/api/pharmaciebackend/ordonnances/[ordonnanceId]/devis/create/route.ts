@@ -6,7 +6,7 @@ import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
 
-// ✅ Type propre (remplace le any)
+// ✅ Type propre
 type OrdonnanceItemInput = {
   nomProduit: string;
   quantite: number;
@@ -21,8 +21,6 @@ export async function POST(
     const { ordonnanceId } = await context.params;
 
     const body = await req.json();
-
-    // ✅ Typage du body
     const { items }: { items: OrdonnanceItemInput[] } = body;
 
     // ✅ Vérification items
@@ -33,7 +31,7 @@ export async function POST(
       );
     }
 
-    // ✅ Validation stricte des données
+    // ✅ Validation stricte
     if (
       !items.every(
         (item) =>
@@ -102,7 +100,29 @@ export async function POST(
       );
     }
 
-    // 🚀 Insertion optimisée
+    // 💰 CALCUL AVANT INSERTION (IMPORTANT 🔥)
+    const total = items.reduce(
+      (sum, item) =>
+        sum.plus(new Prisma.Decimal(item.prixUnitaire).mul(item.quantite)),
+      new Prisma.Decimal(0),
+    );
+
+    const totalNumber = total.toNumber();
+
+    // 🚫 BLOQUER SI > 300 000
+    if (totalNumber > 300000) {
+      return NextResponse.json(
+        { error: "Refusé : montant trop élevé (max 300 000 FCFA)" },
+        { status: 400 },
+      );
+    }
+
+    // 🧹 SUPPRIMER ANCIEN DEVIS (TRÈS IMPORTANT)
+    await prisma.ordonnanceItem.deleteMany({
+      where: { ordonnanceId },
+    });
+
+    // 🚀 INSERT NOUVEAU DEVIS
     await prisma.ordonnanceItem.createMany({
       data: items.map((item) => ({
         ordonnanceId,
@@ -112,28 +132,7 @@ export async function POST(
       })),
     });
 
-    // 🔁 Récupérer items
-    const ordonnanceItems = await prisma.ordonnanceItem.findMany({
-      where: { ordonnanceId },
-    });
-
-    // 💰 Calcul fiable avec Decimal
-    const total = ordonnanceItems.reduce(
-      (sum, i) => sum.plus(new Prisma.Decimal(i.prixUnitaire).mul(i.quantite)),
-      new Prisma.Decimal(0),
-    );
-
-    const totalNumber = total.toNumber();
-
-    // 🚫 CONTRÔLE DU PLAFOND (300 000 FCFA)
-    if (totalNumber > 300000) {
-      return NextResponse.json(
-        { error: "Refusé : montant trop élevé (max 300 000 FCFA)" },
-        { status: 400 },
-      );
-    }
-
-    // 📝 Mise à jour
+    // 📝 UPDATE ORDONNANCE
     const updatedOrdonnance = await prisma.ordonnance.update({
       where: { id: ordonnanceId },
       data: {
@@ -146,7 +145,7 @@ export async function POST(
       {
         success: true,
         message: "Devis envoyé au client",
-        prixTotal: totalNumber, // ✅ pour le front
+        prixTotal: totalNumber,
         ordonnance: updatedOrdonnance,
       },
       { status: 200 },
