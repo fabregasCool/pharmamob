@@ -1,5 +1,5 @@
-//api/clientbackend/ordonnances/[ordonnanceId]/devis/valider/route.ts
-//Permet au CLIENT de valider le devis reçu 
+//api/clientbackend/ordonnances/[ordonnanceId]/devis/valider/create/route.ts
+//Permet au CLIENT de valider le devis reçu
 
 import { PrismaClient } from "@prisma/client";
 import { NextResponse } from "next/server";

@@ -1,10 +1,17 @@
 //api/pharmaciebackend/ordonnances/[ordonnanceId]/devis/create/route.ts
 //Il permet de creer le devis qu'on envoie ensuite au client
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { NextResponse, NextRequest } from "next/server";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+
+// ✅ Type propre (remplace le any)
+type OrdonnanceItemInput = {
+  nomProduit: string;
+  quantite: number;
+  prixUnitaire: number;
+};
 
 export async function POST(
   req: NextRequest,
@@ -14,16 +21,11 @@ export async function POST(
     const { ordonnanceId } = await context.params;
 
     const body = await req.json();
-    const { items } = body;
 
-    /*
-      items attendu :
-      [
-        { nomProduit:"Paracetamol", quantite:2, prixUnitaire:500 },
-        { nomProduit:"Amoxicilline", quantite:1, prixUnitaire:1500 }
-      ]
-    */
+    // ✅ Typage du body
+    const { items }: { items: OrdonnanceItemInput[] } = body;
 
+    // ✅ Vérification items
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
         { error: "Aucun médicament fourni" },
@@ -31,7 +33,22 @@ export async function POST(
       );
     }
 
-    // 1️⃣ Vérifier le token
+    // ✅ Validation stricte des données
+    if (
+      !items.every(
+        (item) =>
+          typeof item.nomProduit === "string" &&
+          typeof item.quantite === "number" &&
+          typeof item.prixUnitaire === "number",
+      )
+    ) {
+      return NextResponse.json(
+        { error: "Format des données invalide" },
+        { status: 400 },
+      );
+    }
+
+    // 🔐 Vérification token
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -40,7 +57,6 @@ export async function POST(
 
     const token = authHeader.split(" ")[1];
 
-    // 2️⃣ Vérifier le JWT
     let decoded: { email: string };
 
     try {
@@ -54,7 +70,7 @@ export async function POST(
       );
     }
 
-    // 3️⃣ Vérifier l'utilisateur
+    // 👤 Vérification user
     const user = await prisma.user.findUnique({
       where: { email: decoded.email },
       select: { id: true, role: true },
@@ -74,7 +90,7 @@ export async function POST(
       );
     }
 
-    // 4️⃣ Vérifier l'ordonnance
+    // 📄 Vérifier ordonnance
     const ordonnance = await prisma.ordonnance.findUnique({
       where: { id: ordonnanceId },
     });
@@ -86,30 +102,38 @@ export async function POST(
       );
     }
 
-    // 5️⃣ Ajouter les items du devis
-    for (const item of items) {
-      await prisma.ordonnanceItem.create({
-        data: {
-          ordonnanceId,
-          nomProduit: item.nomProduit,
-          quantite: item.quantite,
-          prixUnitaire: item.prixUnitaire,
-        },
-      });
-    }
+    // 🚀 Insertion optimisée
+    await prisma.ordonnanceItem.createMany({
+      data: items.map((item) => ({
+        ordonnanceId,
+        nomProduit: item.nomProduit,
+        quantite: item.quantite,
+        prixUnitaire: item.prixUnitaire,
+      })),
+    });
 
-    // 6️⃣ Récupérer tous les items
+    // 🔁 Récupérer items
     const ordonnanceItems = await prisma.ordonnanceItem.findMany({
       where: { ordonnanceId },
     });
 
-    // 7️⃣ Calcul du total
+    // 💰 Calcul fiable avec Decimal
     const total = ordonnanceItems.reduce(
-      (sum, i) => sum + i.prixUnitaire * i.quantite,
-      0,
+      (sum, i) => sum.plus(new Prisma.Decimal(i.prixUnitaire).mul(i.quantite)),
+      new Prisma.Decimal(0),
     );
 
-    // 8️⃣ Mise à jour ordonnance
+    const totalNumber = total.toNumber();
+
+    // 🚫 CONTRÔLE DU PLAFOND (300 000 FCFA)
+    if (totalNumber > 300000) {
+      return NextResponse.json(
+        { error: "Refusé : montant trop élevé (max 300 000 FCFA)" },
+        { status: 400 },
+      );
+    }
+
+    // 📝 Mise à jour
     const updatedOrdonnance = await prisma.ordonnance.update({
       where: { id: ordonnanceId },
       data: {
@@ -122,7 +146,7 @@ export async function POST(
       {
         success: true,
         message: "Devis envoyé au client",
-        prixTotal: total,
+        prixTotal: totalNumber, // ✅ pour le front
         ordonnance: updatedOrdonnance,
       },
       { status: 200 },
