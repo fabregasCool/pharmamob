@@ -1,0 +1,91 @@
+// ✅ /api/adminbackend/ordonnances/valide_par_client/list/route.ts
+//Récupère les ordonnances que le client à valider le devis
+import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+
+const prisma = new PrismaClient();
+
+export async function GET(req: Request) {
+  try {
+    // 1️⃣ Vérifier le token dans le header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Token manquant" }, { status: 401 });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    // 2️⃣ Vérifier et décoder le JWT
+    let decoded: { email: string };
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET!) as { email: string };
+    } catch (err) {
+      console.error("Erreur de vérification du token:", err);
+      return NextResponse.json(
+        { error: "Token invalide ou expiré" },
+        { status: 401 },
+      );
+    }
+
+    // 3️⃣ Vérifier que l’utilisateur est admin
+    const admin = await prisma.user.findUnique({
+      where: { email: decoded.email },
+      select: { id: true, role: true },
+    });
+
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Utilisateur introuvable" },
+        { status: 404 },
+      );
+    }
+
+    if (admin.role !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Accès refusé : réservé aux administrateurs" },
+        { status: 403 },
+      );
+    }
+
+    // 4️⃣ Récupérer toutes les ordonnances avec statut ENVOYEE
+    const ordonnances = await prisma.ordonnance.findMany({
+      where: {
+        statut: "DEVIS_VALIDEE_PAR_CLIENT",
+        deletedAt: null,
+      },
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true,
+            phone: true,
+          },
+        },
+        pharmacie: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    // 5️⃣ Répondre avec la liste complète
+    return NextResponse.json(
+      {
+        success: true,
+        count: ordonnances.length,
+        ordonnances,
+      },
+      { status: 200 },
+    );
+  } catch (err) {
+    console.error(
+      "❌ Erreur GET /api/adminbackend/ordonnances/valide_par_client/list:",
+      err,
+    );
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+  }
+}
