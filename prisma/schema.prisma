@@ -59,9 +59,12 @@ model Produit {
   deletedAt   DateTime?
   pharmacieId String
   categoryId  String
+
   cartItems   CartItem[]
   commandes   Commande[]
   ordonnanceItems OrdonnanceItem[]   // 👈 AJOUTER
+  bondecommandeItems BondecommandeItem[]
+  
   category    Category   @relation(fields: [categoryId], references: [id])
   pharmacie   Pharmacie  @relation(fields: [pharmacieId], references: [id])
 }
@@ -94,6 +97,45 @@ model Ordonnance {
   @@index([pharmacieId])
   @@index([statut])
 }
+model Bondecommande {
+  id               String              @id @default(cuid())
+  imageUrl         String
+  description      String?
+  securite_sociale String
+  userId           String
+  statut           BondecommandeStatut @default(ENVOYEE)
+  prixTotal        Decimal?            @db.Decimal(10, 2)
+  pharmacieId      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+
+  items       BondecommandeItem[]
+
+  pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
+  user             User                @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([pharmacieId])
+  @@index([statut])
+}
+
+// OrdonnanceItem est reservé pour les ordanances envoyés afin de calculer le prix des produits
+model BondecommandeItem {
+  id            String   @id @default(cuid())
+  bondecommandeId  String
+  produitId     String?  // si le produit existe déjà dans la base
+  nomProduit    String   // si le produit vient seulement de l’ordonnance
+  quantite      Int
+  prixUnitaire  Int
+  createdAt     DateTime @default(now())
+
+  bondecommande Bondecommande @relation(fields: [bondecommandeId], references: [id])
+  produit    Produit?   @relation(fields: [produitId], references: [id])
+
+  @@index([bondecommandeId])
+}
+
 // OrdonnanceItem est reservé pour les ordanances envoyés afin de calculer le prix des produits
 model OrdonnanceItem {
   id            String   @id @default(cuid())
@@ -109,6 +151,8 @@ model OrdonnanceItem {
 
   @@index([ordonnanceId])
 }
+
+
 model Commune {
   id          String      @id @default(cuid())
   name        String      @unique
@@ -159,25 +203,7 @@ model Pharmacie {
   produits       Produit[]
 }
 
-model Bondecommande {
-  id               String              @id @default(cuid())
-  imageUrl         String
-  description      String?
-  securite_sociale String
-  userId           String
-  statut           BondecommandeStatut @default(ENVOYEE)
-  prixTotal        Decimal?            @db.Decimal(10, 2)
-  pharmacieId      String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  deletedAt        DateTime?
-  pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
-  user             User                @relation(fields: [userId], references: [id])
 
-  @@index([userId])
-  @@index([pharmacieId])
-  @@index([statut])
-}
 
 model Otp {
   id        String   @id @default(cuid())
@@ -238,6 +264,7 @@ enum OrdonnanceStatut {
 enum BondecommandeStatut {
   ENVOYEE
   DEVIS_RECU
+  DEVIS_VALIDEE_PAR_CLIENT
   PRET
   LIVREE
   ANNULEE
