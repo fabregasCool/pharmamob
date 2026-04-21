@@ -1,29 +1,9 @@
-import paydunya from "paydunya";
+import axios from "axios";
 
-// 🔥 Setup global (lit automatiquement tes variables .env)
-export const setup = new paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY!,
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY!,
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY!,
-  token: process.env.PAYDUNYA_TOKEN!,
-  mode: process.env.PAYDUNYA_MODE || "test",
-});
-
-// 🔥 Configuration de ton business (affiché côté PayDunya)
-export const store = new paydunya.Store({
-  name: "Ma Pharmacie",
-  tagline: "Vos médicaments en toute sécurité",
-  phoneNumber: "0700000000",
-  postalAddress: "Abidjan, Côte d'Ivoire",
-  websiteURL: "https://tonsite.com",
-});
-
-// 🔥 Fonction principale pour créer un paiement
 export async function createPaydunyaInvoice({
   amount,
   description,
   customer,
-  items = [],
   callbackUrl,
   returnUrl,
   cancelUrl,
@@ -35,58 +15,56 @@ export async function createPaydunyaInvoice({
     email?: string;
     phone: string;
   };
-  items?: {
-    name: string;
-    quantity: number;
-    unit_price: number;
-    description?: string;
-  }[];
   callbackUrl: string;
   returnUrl: string;
   cancelUrl: string;
 }) {
   try {
-    const invoice = new paydunya.CheckoutInvoice();
+    const response = await axios.post(
+      "https://app.paydunya.com/api/v1/checkout-invoice/create",
+      {
+        invoice: {
+          total_amount: amount,
+          description,
+        },
+        store: {
+          name: "Ma Pharmacie",
+        },
+        actions: {
+          callback_url: callbackUrl,
+          return_url: returnUrl,
+          cancel_url: cancelUrl,
+        },
+        customer: {
+          name: customer.name,
+          email: customer.email,
+          phone: customer.phone,
+        },
+      },
+      {
+        headers: {
+          "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY!,
+          "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY!,
+          "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN!,
+        },
+      },
+    );
 
-    // 🔹 Ajouter les items (important pour détail facture)
-    items.forEach((item) => {
-      invoice.addItem(
-        item.name,
-        item.quantity,
-        item.unit_price,
-        item.unit_price * item.quantity,
-        item.description || "",
-      );
-    });
+    const data = response.data;
 
-    // 🔹 Description globale
-    invoice.description = description;
-
-    // 🔹 Total (sécurité)
-    invoice.totalAmount = amount;
-
-    // 🔹 Infos client
-    invoice.addCustomer(customer.name, customer.email || "", customer.phone);
-
-    // 🔹 URLs
-    invoice.callbackURL = callbackUrl; // IPN
-    invoice.returnURL = returnUrl; // succès
-    invoice.cancelURL = cancelUrl; // annulation
-
-    // 🔥 Création de la facture
-    const created = await invoice.create();
-
-    if (!created) {
-      throw new Error(invoice.responseText);
+    if (!data.response_code || data.response_code !== "00") {
+      throw new Error(data.response_text || "Erreur PayDunya");
     }
 
     return {
       success: true,
-      token: invoice.token, // 🔥 IMPORTANT (referenceExterne)
-      paymentUrl: invoice.invoice_url, // 🔥 lien à envoyer au client
+      token: data.token,
+      paymentUrl: data.response_text, // ⚠️ parfois ici ou invoice_url selon version
     };
   } catch (error: unknown) {
     if (error instanceof Error) {
+      console.error(error.message);
+
       return {
         success: false,
         message: error.message,
