@@ -24,6 +24,7 @@ model User {
   ordonnances    Ordonnance[]
   otps           Otp[]
   pharmacies     Pharmacie[]
+  paiements      Paiement[]
 }
 
 model Cart {
@@ -64,7 +65,7 @@ model Produit {
   commandes   Commande[]
   ordonnanceItems OrdonnanceItem[]   // 👈 AJOUTER
   bondecommandeItems BondecommandeItem[]
-  
+
   category    Category   @relation(fields: [categoryId], references: [id])
   pharmacie   Pharmacie  @relation(fields: [pharmacieId], references: [id])
 }
@@ -76,27 +77,7 @@ model Category {
   produits  Produit[]
 }
 
-model Ordonnance {
-  id          String           @id @default(cuid())
-  imageUrl    String
-  description String?
-  userId      String
-  statut      OrdonnanceStatut @default(ENVOYEE)
-  prixTotal   Decimal?         @db.Decimal(10, 2)
-  pharmacieId String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  deletedAt   DateTime?
 
-  items       OrdonnanceItem[]
-
-  pharmacie   Pharmacie?       @relation(fields: [pharmacieId], references: [id])
-  user        User             @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([pharmacieId])
-  @@index([statut])
-}
 model Bondecommande {
   id               String              @id @default(cuid())
   imageUrl         String
@@ -120,7 +101,7 @@ model Bondecommande {
   @@index([statut])
 }
 
-// OrdonnanceItem est reservé pour les ordanances envoyés afin de calculer le prix des produits
+// BondecommandeItem est reservé pour les bondecommandes envoyés afin de calculer le prix des produits
 model BondecommandeItem {
   id            String   @id @default(cuid())
   bondecommandeId  String
@@ -136,21 +117,6 @@ model BondecommandeItem {
   @@index([bondecommandeId])
 }
 
-// OrdonnanceItem est reservé pour les ordanances envoyés afin de calculer le prix des produits
-model OrdonnanceItem {
-  id            String   @id @default(cuid())
-  ordonnanceId  String
-  produitId     String?  // si le produit existe déjà dans la base
-  nomProduit    String   // si le produit vient seulement de l’ordonnance
-  quantite      Int
-  prixUnitaire  Int
-  createdAt     DateTime @default(now())
-
-  ordonnance Ordonnance @relation(fields: [ordonnanceId], references: [id])
-  produit    Produit?   @relation(fields: [produitId], references: [id])
-
-  @@index([ordonnanceId])
-}
 
 
 model Commune {
@@ -253,12 +219,14 @@ model Commande {
 }
 
 enum OrdonnanceStatut {
-  ENVOYEE
-  DEVIS_RECU
-  DEVIS_VALIDEE_PAR_CLIENT
-  PRET
-  LIVREE
-  ANNULEE
+  ENVOYEE                   //ordonnance envoyée par le client
+  DEVIS_RECU                //pharmacie a envoyé le devis
+  DEVIS_VALIDEE_PAR_CLIENT  //client accepte le devis
+  PAYEE                     //paiement effectué
+  PRET                      //pharmacie prépare
+  EN_LIVRAISON              //livreur a pris la commande
+  LIVREE                    //client reçu
+  ANNULEE                   //annulée
 }
 
 enum BondecommandeStatut {
@@ -291,4 +259,126 @@ enum CommandeStatus {
   LIVREE
   ANNULEE_PAR_PHARMACIE
   ANNULEE_PAR_LIVREUR
+}
+model Ordonnance {
+  id          String           @id @default(cuid())
+  imageUrl    String
+  description String?
+  userId      String
+  statut      OrdonnanceStatut @default(ENVOYEE)
+  prixTotal   Decimal?         @db.Decimal(10, 2)
+  pharmacieId String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  items       OrdonnanceItem[]
+  paiements   Paiement[]
+
+  pharmacie   Pharmacie?       @relation(fields: [pharmacieId], references: [id])
+  user        User             @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([pharmacieId])
+  @@index([statut])
+}
+// OrdonnanceItem est reservé pour les ordanances envoyés afin de calculer le prix des produits
+model OrdonnanceItem {
+  id            String   @id @default(cuid())
+  ordonnanceId  String
+  produitId     String?  // si le produit existe déjà dans la base
+  nomProduit    String   // si le produit vient seulement de l’ordonnance
+  quantite      Int
+  prixUnitaire  Int
+  createdAt     DateTime @default(now())
+
+  ordonnance Ordonnance @relation(fields: [ordonnanceId], references: [id])
+  produit    Produit?   @relation(fields: [produitId], references: [id])
+
+  @@index([ordonnanceId])
+}
+
+enum PaiementMethode {
+  CARTE
+  MTN_MONEY
+  MOOV_MONEY
+  ORANGE_MONEY
+  WAVE
+}
+enum PaiementProvider {
+  CINETPAY
+  STRIPE
+  PAYDUNYA // ✅ AJOUT
+
+}
+
+model Paiement {
+  id               String           @id @default(cuid())
+  transactionId    String           @unique //ID de la transaction
+
+  montant          Decimal          @db.Decimal(10, 2)
+  montantInitial   Decimal          @db.Decimal(10, 2)//le montant original du paiement au moment où il a été créé, il sécurise le montant qui peut changer (on ne sait jamais)
+
+  devise           String           @default("XOF")//la monnaie utilisée pour le paiement: "XOF" est le  Franc CFA (Côte d'Ivoire 🇨🇮)
+
+  methode          PaiementMethode
+  provider         PaiementProvider
+
+  statut           PaiementStatut   @default(EN_ATTENTE)
+
+  referenceExterne String? //l’identifiant que le provider de paiement (PayDunya, CinetPay, Stripe, etc.) te donne
+  paymentUrl       String? //pour rediriger Flutter vers paiement
+  signature        String? //vérifier que le paiement vient bien du provider (CinetPay, Stripe, etc.) et qu’il n’a pas été falsifié
+  message          String? //une information descriptive liée au paiement
+ 
+ receiptUrl       String? // ✅ lien vers le reçu officiel PayDunya (PDF).
+ providerHash     String? // ✅ sécurité IPN : signature envoyée par PayDunya pour prouver que a requête vient bien de leurs serveurs et les données n’ont pas été modifiées
+ rawData          Json? // ✅ Stocker TOUTE la réponse brute de PayDunya (c'est un json avec toutes les données)
+
+  // 🔥 URL CinetPay
+  successUrl       String?//lien si le paiement est un succès
+  failureUrl       String?//lien si le paiement est un echec
+  notifyUrl        String?//lien de notification envoyé par le provider(cinetpay...)
+
+  // 🔥 Infos client (TRÈS IMPORTANT), car ces valeurs ne chanageront jamais meme si après le client fait une mise à jour de son profil
+  customerName     String?
+  customerEmail    String?
+  customerPhone    String?
+
+  deletedAt        DateTime?  //Le paiement est archivé et non supprimé
+  callbackAt       DateTime? //Savoir quand le provider a repondu
+  expiresAt        DateTime? // La date et l’heure où le paiement expire
+
+
+  // 🔥 relations
+  userId           String
+  user             User             @relation(fields: [userId], references: [id])
+
+  ordonnanceId     String?
+  ordonnance       Ordonnance?      @relation(fields: [ordonnanceId], references: [id])
+
+  // 🔥 système générique
+  type             PaiementType
+  resourceId       String //ID de la ressource(id de ordonnance ou bondecommande...) que tu es en train de payer
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([userId])//Idéal pour les recherches par userId
+  @@index([resourceId])//Idéal pour les recherches par resourceId
+  @@index([transactionId])//Idéal pour les recherches par transactionId
+}
+enum PaiementStatut {
+  EN_ATTENTE     // paiement initié, en attente de confirmation
+  EN_COURS       // utilisateur en train de payer (optionnel mais utile)
+  SUCCES         // paiement validé
+  ECHEC          // paiement échoué
+  ANNULE         // annulé par l'utilisateur
+  EXPIRE         // session de paiement expirée
+  REMBOURSE      // remboursement effectué (optionnel pour plus tard)
+}
+enum PaiementType {
+  ORDONNANCE
+  BON_COMMANDE
+  LIVRAISON
 }
