@@ -1,3 +1,5 @@
+//src/lib/paydunya
+
 import paydunya from "paydunya";
 
 // 🔥 Setup global (exécuté une seule fois)
@@ -13,7 +15,7 @@ new paydunya.Setup({
 new paydunya.Store({
   name: "Ma Pharmacie",
   tagline: "Vos médicaments en toute sécurité",
-  phoneNumber: "+2250707070707", // ✅ format international
+  phoneNumber: "+2250808080808", // ✅ format international
   postalAddress: "Abidjan, Côte d'Ivoire",
   websiteURL: "https://tonsite.com",
 });
