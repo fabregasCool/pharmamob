@@ -9,11 +9,11 @@ new paydunya.Setup({
   mode: process.env.PAYDUNYA_MODE || "test",
 });
 
-// 🔥 Configuration business (optionnelle mais propre)
+// 🔥 Configuration business (optionnelle mais propre )
 new paydunya.Store({
   name: "Ma Pharmacie",
   tagline: "Vos médicaments en toute sécurité",
-  phoneNumber: "+2250700000000", // ✅ format international
+  phoneNumber: "+2250707070707", // ✅ format international
   postalAddress: "Abidjan, Côte d'Ivoire",
   websiteURL: "https://tonsite.com",
 });
