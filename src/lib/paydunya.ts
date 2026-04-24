@@ -1,27 +1,14 @@
-//src/lib/paydunya
+// src/lib/paydunya.ts
 
-import paydunya from "paydunya";
+type PaydunyaApiResponse = {
+  response_code: string;
+  response_text: string;
+  token?: string;
+  message?: string;
+};
 
-// 🔥 Setup global (exécuté une seule fois)
-new paydunya.Setup({
-  masterKey: process.env.PAYDUNYA_MASTER_KEY!,
-  privateKey: process.env.PAYDUNYA_PRIVATE_KEY!,
-  publicKey: process.env.PAYDUNYA_PUBLIC_KEY!,
-  token: process.env.PAYDUNYA_TOKEN!,
-  mode: process.env.PAYDUNYA_MODE || "test",
-});
-
-// 🔥 Configuration business (optionnelle mais propre )
-new paydunya.Store({
-  name: "Ma Pharmacie",
-  tagline: "Vos médicaments en toute sécurité",
-  phoneNumber: "+2250808080808", // ✅ format international
-  postalAddress: "Abidjan, Côte d'Ivoire",
-  websiteURL: "https://tonsite.com",
-});
-
-// 🔥 Fonction principale pour créer un paiement
 export async function createPaydunyaInvoice({
+  transactionId,
   amount,
   description,
   customer,
@@ -30,6 +17,7 @@ export async function createPaydunyaInvoice({
   returnUrl,
   cancelUrl,
 }: {
+  transactionId?: string;
   amount: number;
   description: string;
   customer: {
@@ -48,54 +36,104 @@ export async function createPaydunyaInvoice({
   cancelUrl: string;
 }) {
   try {
-    const invoice = new paydunya.CheckoutInvoice();
-
-    // 🔹 Sécurisation téléphone
-    const safePhone = customer.phone || "+2250700000000";
-
-    // 🔹 Ajouter les items (source principale du total)
-    items.forEach((item) => {
-      invoice.addItem(
-        item.name,
-        item.quantity,
-        item.unit_price,
-        item.unit_price * item.quantity,
-        item.description || "",
-      );
-    });
-
-    // 🔹 Description globale
-    invoice.description = description;
-
-    // ❌ SUPPRIMÉ : invoice.totalAmount = amount;
-    // 👉 PayDunya calcule automatiquement via les items
-
-    // 🔹 Infos client
-    invoice.addCustomer(customer.name, customer.email || "", safePhone);
-
-    // 🔹 URLs
-    invoice.callbackURL = callbackUrl;
-    invoice.returnURL = returnUrl;
-    invoice.cancelURL = cancelUrl;
-
-    // 🔥 Création de la facture
-    const created = await invoice.create();
-
-    if (!created) {
-      throw new Error(invoice.responseText);
+    if (
+      !process.env.PAYDUNYA_MASTER_KEY ||
+      !process.env.PAYDUNYA_PRIVATE_KEY ||
+      !process.env.PAYDUNYA_TOKEN
+    ) {
+      throw new Error("Configuration PayDunya manquante");
     }
 
-    // 🔐 Vérification de sécurité
-    if (!invoice.token || !invoice.invoice_url) {
-      throw new Error("Réponse PayDunya invalide");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(
+      "https://app.paydunya.com/api/v1/checkout-invoice/create",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "PAYDUNYA-MASTER-KEY": process.env.PAYDUNYA_MASTER_KEY,
+          "PAYDUNYA-PRIVATE-KEY": process.env.PAYDUNYA_PRIVATE_KEY,
+          "PAYDUNYA-TOKEN": process.env.PAYDUNYA_TOKEN,
+        },
+        body: JSON.stringify({
+          invoice: {
+            total_amount: amount,
+            description,
+          },
+          store: {
+            name: "Ma Pharmacie",
+          },
+          actions: {
+            callback_url: callbackUrl,
+            return_url: returnUrl,
+            cancel_url: cancelUrl,
+          },
+          items:
+            items.length > 0
+              ? items.map((item) => ({
+                  name: item.name,
+                  quantity: item.quantity,
+                  unit_price: item.unit_price,
+                  total_price: item.unit_price * item.quantity,
+                  description: item.description || "",
+                }))
+              : [
+                  {
+                    name: description,
+                    quantity: 1,
+                    unit_price: amount,
+                    total_price: amount,
+                    description,
+                  },
+                ],
+          custom_data: {
+            transaction_id: transactionId,
+            customer_name: customer.name,
+            customer_email: customer.email || "",
+            customer_phone: customer.phone,
+          },
+        }),
+        signal: controller.signal,
+      },
+    );
+
+    clearTimeout(timeout);
+
+    let data: PaydunyaApiResponse;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("Réponse PayDunya invalide (non JSON)");
+    }
+
+    console.log("PAYDUNYA RESPONSE:", data);
+
+    if (!response.ok) {
+      throw new Error(data?.message || "Erreur PayDunya");
+    }
+
+    if (data?.response_code !== "00") {
+      throw new Error(data?.response_text || "Erreur PayDunya");
+    }
+
+    if (!data?.response_text) {
+      throw new Error("URL de paiement introuvable");
+    }
+
+    if (!data?.token) {
+      throw new Error("Token PayDunya manquant");
     }
 
     return {
       success: true,
-      token: invoice.token, // 🔥 référence externe
-      paymentUrl: invoice.invoice_url, // 🔥 lien paiement
+      token: data.token,
+      paymentUrl: data.response_text,
     };
   } catch (error: unknown) {
+    console.error("PAYDUNYA ERROR:", error);
+
     if (error instanceof Error) {
       return {
         success: false,

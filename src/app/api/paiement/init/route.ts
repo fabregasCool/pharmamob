@@ -1,4 +1,5 @@
 //api/paiement/init
+export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import {
   PrismaClient,
@@ -123,7 +124,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (!result.success) {
-      throw new Error(result.message);
+      return NextResponse.json({ error: result.message }, { status: 400 });
     }
 
     // 🔥 5. update paiement
