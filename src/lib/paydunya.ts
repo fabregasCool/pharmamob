@@ -57,7 +57,7 @@ export async function createPaydunyaInvoice({
     console.log("=========================");
 
     const response = await fetch(
-      "https://app.paydunya.com/api/v1/checkout-invoice/create",
+      "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/create",
       {
         method: "POST",
         headers: {
@@ -157,3 +157,4 @@ export async function createPaydunyaInvoice({
     };
   }
 }
+//https://app.paydunya.com/api/v1/checkout-invoice/create

@@ -1,6 +1,8 @@
-//api/paiement/init
+//api/clientbackend/paiement/init
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
+import { createPaydunyaInvoice } from "@/lib/paydunya";
+
 import {
   PrismaClient,
   User,
@@ -8,7 +10,6 @@ import {
   PaiementProvider,
   PaiementType,
 } from "@prisma/client";
-import { createPaydunyaInvoice } from "@/lib/paydunya";
 
 const prisma = new PrismaClient();
 
