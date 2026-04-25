@@ -104,6 +104,7 @@ export async function POST(req: NextRequest) {
 
     // 💳 4. créer facture PayDunya
     const result = await createPaydunyaInvoice({
+      transactionId, // 🔥 IMPORTANT
       amount: montant,
       description: `Paiement ${type}`,
       customer: {
