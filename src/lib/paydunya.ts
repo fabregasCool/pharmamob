@@ -48,6 +48,14 @@ export async function createPaydunyaInvoice({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
+    // 🔍 DEBUG DES VARIABLES D'ENV
+    console.log("==== PAYDUNYA CONFIG ====");
+    console.log("MASTER_KEY:", process.env.PAYDUNYA_MASTER_KEY);
+    console.log("PRIVATE_KEY:", process.env.PAYDUNYA_PRIVATE_KEY);
+    console.log("PUBLIC_KEY:", process.env.PAYDUNYA_PUBLIC_KEY);
+    console.log("TOKEN:", process.env.PAYDUNYA_TOKEN);
+    console.log("=========================");
+
     const response = await fetch(
       "https://app.paydunya.com/api/v1/checkout-invoice/create",
       {
