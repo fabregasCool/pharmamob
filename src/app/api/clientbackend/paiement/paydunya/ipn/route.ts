@@ -71,6 +71,7 @@ export async function POST(req: NextRequest) {
       console.error("❌ Paiement non validé par PayDunya");
       return new Response("Paiement invalide", { status: 400 });
     }
+
     switch (status) {
       case "completed":
         console.log("✅ Paiement réussi");
@@ -79,6 +80,8 @@ export async function POST(req: NextRequest) {
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
+            rawData: verifyData,
+            callbackAt: new Date(),
           },
         });
 
@@ -89,6 +92,14 @@ export async function POST(req: NextRequest) {
         });
 
         break;
+      case "pending":
+        console.log("⏳ Toujours en attente");
+
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: { statut: "EN_COURS" }, // ou EN_ATTENTE
+        });
+        break;
 
       case "cancelled":
         console.log("❌ Paiement annulé");
@@ -97,30 +108,6 @@ export async function POST(req: NextRequest) {
           where: { id: paiement.id },
           data: {
             statut: "ANNULE",
-          },
-        });
-
-        break;
-
-      case "failed":
-        console.log("❌ Paiement échoué");
-
-        await prisma.paiement.update({
-          where: { id: paiement.id },
-          data: {
-            statut: "ECHEC",
-          },
-        });
-
-        break;
-
-      case "expired":
-        console.log("⏳ Paiement expiré");
-
-        await prisma.paiement.update({
-          where: { id: paiement.id },
-          data: {
-            statut: "EXPIRE",
           },
         });
 
