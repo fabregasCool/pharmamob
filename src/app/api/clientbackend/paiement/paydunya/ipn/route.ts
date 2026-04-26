@@ -58,9 +58,19 @@ export async function POST(req: NextRequest) {
       return new Response("Montant invalide", { status: 400 });
     }
 
-    const status = verifyData?.status;
+    //On recupère les status apportés par paydunya après le paiement
+    const status = verifyData?.invoice?.status;
+
+    if (!status) {
+      console.error("❌ Status introuvable dans verifyData");
+      return new Response("Status invalide", { status: 400 });
+    }
 
     // 🔥 5. Gestion des statuts
+    if (verifyData.response_code !== "00") {
+      console.error("❌ Paiement non validé par PayDunya");
+      return new Response("Paiement invalide", { status: 400 });
+    }
     switch (status) {
       case "completed":
         console.log("✅ Paiement réussi");
