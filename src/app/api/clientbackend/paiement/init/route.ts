@@ -95,9 +95,9 @@ export async function POST(req: NextRequest) {
         customerEmail: user.email ?? "",
         customerPhone: user.phone ?? "",
 
-        successUrl: `${process.env.APP_URL}/success`,
-        failureUrl: `${process.env.APP_URL}/failure`,
-        notifyUrl: `${process.env.APP_URL}/api/paydunya/ipn`,
+        successUrl: `${process.env.APP_URL}/paydunya/paiement/success`,
+        failureUrl: `${process.env.APP_URL}/paydunya/paiement/failure`,
+        notifyUrl: `${process.env.APP_URL}/api/clientbackend/paydunya/ipn`,
 
         expiresAt: new Date(Date.now() + 30 * 60 * 1000),
       },
