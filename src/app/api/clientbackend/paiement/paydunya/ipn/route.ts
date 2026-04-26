@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     //On recupère les status apportés par paydunya après le paiement
-    const status = verifyData?.invoice?.status;
+    const status = verifyData?.status;
 
     if (!status) {
       console.error("❌ Status introuvable dans verifyData");
