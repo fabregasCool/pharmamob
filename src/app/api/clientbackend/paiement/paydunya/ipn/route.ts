@@ -5,13 +5,29 @@ import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+type PaydunyaIPNData = {
+  invoice?: {
+    token?: string;
+    total_amount?: number | string;
+  };
+  status?: "completed" | "pending" | "cancelled" | "failed";
+  response_code?: string;
+};
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const formData = await req.formData();
+    const rawData = formData.get("data");
+
+    if (!rawData || typeof rawData !== "string") {
+      return new Response("Bad Request", { status: 400 });
+    }
+
+    const body: PaydunyaIPNData = JSON.parse(rawData);
 
     console.log("🔔 IPN PAYDUNYA:", body);
 
-    const token = body?.data?.token || body?.token || body?.invoice?.token;
+    const token = body?.invoice?.token;
 
     if (!token) {
       return new Response("Token manquant", { status: 400 });
@@ -52,7 +68,7 @@ export async function POST(req: NextRequest) {
     // 🔐 4. Vérification montant (sécurité)
 
     const montantDB = (paiement.montant as Prisma.Decimal).toNumber();
-    const montantPaydunya = Number(verifyData.invoice.total_amount);
+    const montantPaydunya = Number(verifyData?.invoice?.total_amount);
     if (montantDB !== montantPaydunya) {
       console.error("❌ Montant incorrect !");
       return new Response("Montant invalide", { status: 400 });
