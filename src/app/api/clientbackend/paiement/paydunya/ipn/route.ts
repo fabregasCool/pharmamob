@@ -1,5 +1,5 @@
 //C'est cet api qui va permettre à dire à mon backend que le paiement est vraiement effectué
-// /api/paydunya/ipn/route.ts
+// src/app/api/clientbackend/paiement/paydunya/ipn/route.ts
 import { NextRequest } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
 
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
     console.log("🔔 IPN PAYDUNYA:", body);
 
-    const token = body?.data?.token;
+    const token = body?.data?.token || body?.token || body?.invoice?.token;
 
     if (!token) {
       return new Response("Token manquant", { status: 400 });
