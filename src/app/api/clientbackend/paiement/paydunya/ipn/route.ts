@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
-import crypto from "crypto";
 
 const prisma = new PrismaClient();
 
@@ -83,14 +82,6 @@ export async function POST(req: NextRequest) {
       return new Response("Paiement invalide", { status: 400 });
     }
 
-    if (!verifyResponse.ok) {
-      console.error("❌ Erreur API PayDunya");
-
-      return new Response("Erreur PayDunya", {
-        status: 500,
-      });
-    }
-
     const verifyStatus = verifyData?.status;
 
     if (!verifyStatus) {
@@ -98,10 +89,7 @@ export async function POST(req: NextRequest) {
       return new Response("Status invalide", { status: 400 });
     }
 
-    // 🔥 6.  providerHash signature envoyée par PayDunya pour prouver que a requête vient bien de leurs serveurs et les données n’ont pas été modifiées
-
-    // 🔥 7. gestion des statuts
-
+    // 🔥 6. gestion des statuts
     switch (verifyStatus) {
       case "completed":
         console.log("✅ Paiement réussi");
@@ -116,9 +104,9 @@ export async function POST(req: NextRequest) {
 
             callbackAt: new Date(),
 
-            // 🔥 valeurs utiles extraites du JSON
-            receiptUrl: String(verifyData.receipt_url), //Recupère receipt_url de rawData
-            providerHash: String(verifyData.hash), //recupère hash de rawData
+            // 🔥 extraction des données utiles
+            receiptUrl: String(verifyData.receipt_url),
+            providerHash: String(verifyData.hash),
           },
         });
 
