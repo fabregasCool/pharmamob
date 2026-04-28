@@ -89,47 +89,27 @@ export async function POST(req: NextRequest) {
       return new Response("Status invalide", { status: 400 });
     }
 
+    const providerHash = parsed?.hash;
+    const receiptUrl = verifyData?.receipt_url;
+
     // 🔥 6. gestion des statuts
     switch (verifyStatus) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        // 🔥 a. sauvegarder toutes les données
         await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
+
+            // 🔥 archive complète PayDunya
             rawData: verifyData,
+
             callbackAt: new Date(),
-          },
-        });
 
-        // 🔥 b. relire depuis PostgreSQL
-        const paiementUpdated = await prisma.paiement.findUnique({
-          where: { id: paiement.id },
-          select: {
-            rawData: true,
-          },
-        });
-
-        // 🔥 c. caster le JSON
-        const raw = paiementUpdated?.rawData as Prisma.JsonObject;
-
-        // 🔥 d. extraire les valeurs
-        const receiptUrl =
-          typeof raw?.receipt_url === "string" ? raw.receipt_url : null;
-
-        const providerHash = typeof raw?.hash === "string" ? raw.hash : null;
-
-        console.log("🧾 RECEIPT:", receiptUrl);
-        console.log("🔐 HASH:", providerHash);
-
-        // 🔥 e. mise à jour finale
-        await prisma.paiement.update({
-          where: { id: paiement.id },
-          data: {
-            receiptUrl,
-            providerHash,
+            // 🔥 extraction des données utiles
+            receiptUrl: receiptUrl ?? null,
+            providerHash: providerHash ?? null,
           },
         });
 
