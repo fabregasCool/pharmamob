@@ -94,19 +94,24 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
+        const providerHash = parsed?.hash ?? null;
+        const receiptUrl = parsed?.receipt_url ?? null;
+
         await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
 
-            // 🔥 IPN original
-            rawData: parsed,
+            // 🔥 garde tout (très utile pour debug + audit)
+            rawData: {
+              ipn: parsed,
+              verify: verifyData,
+            },
 
             callbackAt: new Date(),
 
-            // 🔥 données utiles
-            receiptUrl: parsed?.receipt_url ?? null,
-            providerHash: parsed?.hash ?? null,
+            receiptUrl: receiptUrl,
+            providerHash: providerHash,
           },
         });
 
