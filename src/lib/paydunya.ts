@@ -149,4 +149,3 @@ export async function createPaydunyaInvoice({
     };
   }
 }
-//https://app.paydunya.com/api/v1/checkout-invoice/create
