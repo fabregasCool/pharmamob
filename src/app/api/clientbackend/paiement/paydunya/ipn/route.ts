@@ -94,25 +94,26 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        const updatedPaiement = await prisma.paiement.update({
+        const receiptUrl =
+          typeof verifyData.receipt_url === "string"
+            ? verifyData.receipt_url
+            : null;
+
+        const providerHash =
+          typeof verifyData.hash === "string" ? verifyData.hash : null;
+
+        console.log("🧾 receiptUrl:", receiptUrl);
+        console.log("🔐 providerHash:", providerHash);
+
+        await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
             rawData: verifyData,
             callbackAt: new Date(),
-          },
-        });
 
-        const raw = updatedPaiement.rawData as {
-          receipt_url?: string;
-          hash?: string;
-        };
-
-        await prisma.paiement.update({
-          where: { id: paiement.id },
-          data: {
-            receiptUrl: raw.receipt_url ?? null,
-            providerHash: raw.hash ?? null,
+            receiptUrl,
+            providerHash,
           },
         });
 
