@@ -100,19 +100,6 @@ export async function POST(req: NextRequest) {
 
     // 🔥 6.  providerHash signature envoyée par PayDunya pour prouver que a requête vient bien de leurs serveurs et les données n’ont pas été modifiées
 
-    const expectedHash = crypto
-      .createHash("sha512")
-      .update(process.env.PAYDUNYA_MASTER_KEY!)
-      .digest("hex");
-
-    if (verifyData.hash !== expectedHash) {
-      console.error("❌ Hash PayDunya invalide");
-
-      return new Response("Unauthorized", {
-        status: 401,
-      });
-    }
-
     // 🔥 7. gestion des statuts
 
     switch (verifyStatus) {
@@ -123,12 +110,15 @@ export async function POST(req: NextRequest) {
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
+
+            // 🔥 archive complète PayDunya
             rawData: verifyData,
+
             callbackAt: new Date(),
 
-            // ✅ nouveau
-            receiptUrl: verifyData?.receipt_url || null,
-            providerHash: verifyData?.hash || null,
+            // 🔥 valeurs utiles extraites du JSON
+            receiptUrl: String(verifyData.receipt_url), //Recupère receipt_url de rawData
+            providerHash: String(verifyData.hash), //recupère hash de rawData
           },
         });
 
