@@ -89,9 +89,6 @@ export async function POST(req: NextRequest) {
       return new Response("Status invalide", { status: 400 });
     }
 
-    const providerHash = parsed?.hash;
-    const receiptUrl = verifyData?.receipt_url;
-
     // 🔥 6. gestion des statuts
     switch (verifyStatus) {
       case "completed":
@@ -102,14 +99,14 @@ export async function POST(req: NextRequest) {
           data: {
             statut: "SUCCES",
 
-            // 🔥 archive complète PayDunya
-            rawData: verifyData,
+            // 🔥 IPN original
+            rawData: parsed,
 
             callbackAt: new Date(),
 
-            // 🔥 extraction des données utiles
-            receiptUrl: receiptUrl ?? null,
-            providerHash: providerHash ?? null,
+            // 🔥 données utiles
+            receiptUrl: parsed?.receipt_url ?? null,
+            providerHash: parsed?.hash ?? null,
           },
         });
 
