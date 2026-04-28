@@ -105,8 +105,8 @@ export async function POST(req: NextRequest) {
             callbackAt: new Date(),
 
             // 🔥 extraction des données utiles
-            receiptUrl: String(verifyData.receipt_url),
-            providerHash: String(verifyData.hash),
+            receiptUrl: String(verifyData.receipt_url) || "receipt",
+            providerHash: String(verifyData.hash) || "providerHash",
           },
         });
 
