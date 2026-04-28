@@ -114,7 +114,7 @@ export async function createPaydunyaInvoice({
 
     if (!response.ok) {
       throw new Error(data?.message || "Erreur PayDunya");
-    }
+    }                                                                                            
 
     if (data?.response_code !== "00") {
       throw new Error(data?.response_text || "Erreur PayDunya");

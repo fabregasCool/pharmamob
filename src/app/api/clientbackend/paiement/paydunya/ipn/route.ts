@@ -94,19 +94,25 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        await prisma.paiement.update({
+        const updatedPaiement = await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
-
-            // 🔥 archive complète PayDunya
             rawData: verifyData,
-
             callbackAt: new Date(),
+          },
+        });
 
-            // 🔥 extraction des données utiles
-            receiptUrl: String(verifyData.receipt_url) || "receipt",
-            providerHash: String(verifyData.hash) || "providerHash",
+        const raw = updatedPaiement.rawData as {
+          receipt_url?: string;
+          hash?: string;
+        };
+
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: {
+            receiptUrl: raw.receipt_url ?? null,
+            providerHash: raw.hash ?? null,
           },
         });
 
