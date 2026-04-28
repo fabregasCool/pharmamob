@@ -1,35 +1,27 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
   useEffect(() => {
-    if (!token) return;
-
-    const verifyPayment = async () => {
-      try {
-        const res = await fetch(
-          `/api/clientbackend/paiement/paydunya/check?token=${token}`,
-        );
-
-        const data = await res.json();
-        console.log("VERIFY RESULT:", data);
-      } catch (err) {
-        console.error("Erreur vérification paiement", err);
-      }
-    };
-
-    verifyPayment();
+    if (token) {
+      fetch(`/api/clientbackend/paiement/paydunya/check?token=${token}`)
+        .then((res) => res.json())
+        .then((data) => console.log("CHECK:", data));
+    }
   }, [token]);
 
+  return <div>Paiement en cours de validation...</div>;
+}
+
+export default function Page() {
   return (
-    <div>
-      <h1>Paiement réussi ✅</h1>
-      <p>Votre commande est en cours de traitement.</p>
-    </div>
+    <Suspense fallback={<div>Chargement...</div>}>
+      <SuccessContent />
+    </Suspense>
   );
 }
