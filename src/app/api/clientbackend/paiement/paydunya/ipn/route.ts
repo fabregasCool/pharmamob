@@ -94,24 +94,40 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        const receiptUrl =
-          typeof verifyData.receipt_url === "string"
-            ? verifyData.receipt_url
-            : null;
-
-        const providerHash =
-          typeof verifyData.hash === "string" ? verifyData.hash : null;
-
-        console.log("🧾 receiptUrl:", receiptUrl);
-        console.log("🔐 providerHash:", providerHash);
-
+        // 🔥 a. sauvegarder toutes les données
         await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
             rawData: verifyData,
             callbackAt: new Date(),
+          },
+        });
 
+        // 🔥 b. relire depuis PostgreSQL
+        const paiementUpdated = await prisma.paiement.findUnique({
+          where: { id: paiement.id },
+          select: {
+            rawData: true,
+          },
+        });
+
+        // 🔥 c. caster le JSON
+        const raw = paiementUpdated?.rawData as Prisma.JsonObject;
+
+        // 🔥 d. extraire les valeurs
+        const receiptUrl =
+          typeof raw?.receipt_url === "string" ? raw.receipt_url : null;
+
+        const providerHash = typeof raw?.hash === "string" ? raw.hash : null;
+
+        console.log("🧾 RECEIPT:", receiptUrl);
+        console.log("🔐 HASH:", providerHash);
+
+        // 🔥 e. mise à jour finale
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: {
             receiptUrl,
             providerHash,
           },
