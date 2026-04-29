@@ -94,32 +94,41 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        const providerHash = parsed?.hash ?? null;
-        const receiptUrl = parsed?.receipt_url ?? null;
+        // 1. Extraction des données spécifiques
+        // Note : PayDunya envoie souvent le hash dans les headers,
+        // mais si tu l'as dans le body (rawData), on le récupère ici.
+        const providerHash =
+          parsed?.hash || req.headers.get("x-paydunya-signature") || null;
 
-        await prisma.paiement.update({
-          where: { id: paiement.id },
-          data: {
-            statut: "SUCCES",
+        // PayDunya renvoie l'URL du reçu dans invoice.receipt_url lors de la confirmation
+        const receiptUrl =
+          verifyData?.invoice?.receipt_url || parsed?.receipt_url || null;
 
-            // 🔥 garde tout (très utile pour debug + audit)
-            rawData: {
-              ipn: parsed,
-              verify: verifyData,
+        // 2. Mise à jour atomique (Transaction)
+        await prisma.$transaction([
+          // Mise à jour du Paiement
+          prisma.paiement.update({
+            where: { id: paiement.id },
+            data: {
+              statut: "SUCCES",
+              receiptUrl: receiptUrl,
+              providerHash: providerHash,
+              callbackAt: new Date(),
+              rawData: {
+                ipn: parsed,
+                verify: verifyData,
+              },
             },
+          }),
 
-            callbackAt: new Date(),
+          // Mise à jour de l'Ordonnance (Ressource liée)
+          prisma.ordonnance.update({
+            where: { id: paiement.resourceId }, // Bien utiliser resourceId comme dans ton code
+            data: { statut: "PAYEE" },
+          }),
+        ]);
 
-            receiptUrl: receiptUrl,
-            providerHash: providerHash,
-          },
-        });
-
-        await prisma.ordonnance.update({
-          where: { id: paiement.resourceId },
-          data: { statut: "PAYEE" },
-        });
-
+        console.log("🚀 Base de données mise à jour avec succès");
         break;
 
       case "pending":
