@@ -94,10 +94,12 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        // 🔥 extraction depuis IPN (parsed)
-        const receiptUrl = parsed?.receipt_url ?? null;
+        // 🔥 récupérer depuis verifyData (LA BONNE SOURCE)
+        const receiptUrl =
+          verifyData?.receipt_url ?? verifyData?.invoice?.receipt_url ?? null;
+
         const providerHash =
-          parsed?.hash || req.headers.get("x-paydunya-signature") || null;
+          verifyData?.hash || req.headers.get("x-paydunya-signature") || null;
 
         console.log("🧾 receiptUrl:", receiptUrl);
         console.log("🔐 providerHash:", providerHash);
@@ -106,9 +108,9 @@ export async function POST(req: NextRequest) {
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
-            receiptUrl, // 👈 ajouté
-            providerHash, // 👈 ajouté
-            rawData: parsed, // 👈 garde IPN (important)
+            receiptUrl, // ✅ maintenant ça marche
+            providerHash, // ✅ maintenant ça marche
+            rawData: verifyData, // ou parsed + verify si tu veux
             callbackAt: new Date(),
           },
         });
