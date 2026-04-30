@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       await prisma.paiement.update({
         where: { id: paiement.id },
         data: {
-          statut: "SUCCES",
+          statut: "REMBOURSE",
           receiptUrl, // ✅ maintenant ça marche
           providerHash, // ✅ maintenant ça marche
           rawData: verifyData, // ou parsed + verify si tu veux
