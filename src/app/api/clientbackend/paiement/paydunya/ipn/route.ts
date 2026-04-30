@@ -94,25 +94,28 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        // 1. Extraction des données spécifiques
-        // Note : PayDunya envoie souvent le hash dans les headers,
-        // mais si tu l'as dans le body (rawData), on le récupère ici.
+        // 🔐 1. Extraction des données fiables (priorité IPN)
         const providerHash =
           parsed?.hash || req.headers.get("x-paydunya-signature") || null;
 
-        // PayDunya renvoie l'URL du reçu dans invoice.receipt_url lors de la confirmation
-        const receiptUrl =
-          verifyData?.invoice?.receipt_url || parsed?.receipt_url || null;
+        const receiptUrl = parsed?.receipt_url ?? null;
 
-        // 2. Mise à jour atomique (Transaction)
+        console.log("🧾 receiptUrl final:", receiptUrl);
+        console.log("🔐 providerHash:", providerHash);
+
+        // ⚠️ (optionnel mais recommandé) : sécurité minimale
+        if (!receiptUrl) {
+          console.warn("⚠️ receipt_url manquant dans l’IPN");
+        }
+
+        // 🚀 2. Mise à jour atomique
         await prisma.$transaction([
-          // Mise à jour du Paiement
           prisma.paiement.update({
             where: { id: paiement.id },
             data: {
               statut: "SUCCES",
-              receiptUrl: receiptUrl,
-              providerHash: providerHash,
+              receiptUrl,
+              providerHash,
               callbackAt: new Date(),
               rawData: {
                 ipn: parsed,
@@ -121,9 +124,8 @@ export async function POST(req: NextRequest) {
             },
           }),
 
-          // Mise à jour de l'Ordonnance (Ressource liée)
           prisma.ordonnance.update({
-            where: { id: paiement.resourceId }, // Bien utiliser resourceId comme dans ton code
+            where: { id: paiement.resourceId },
             data: { statut: "PAYEE" },
           }),
         ]);
