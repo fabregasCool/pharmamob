@@ -131,9 +131,7 @@ export async function GET(req: NextRequest) {
         break;
     }
 
-    return Response.json({
-      statut: paiement.statut,
-    });
+    return Response.json(verifyData);
   } catch (error) {
     console.error("❌ ERREUR CHECK:", error);
     return Response.json({ error: "Erreur serveur" }, { status: 500 });
