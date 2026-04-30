@@ -94,27 +94,53 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
-        // 🔐 1. Extraction des données fiables (priorité IPN)
+        // 🔐 1. Hash (IPN prioritaire)
         const providerHash =
           parsed?.hash || req.headers.get("x-paydunya-signature") || null;
 
-        const receiptUrl = parsed?.receipt_url ?? null;
+        // 🧾 2. Extraction robuste du receipt_url
+        let receiptUrl: string | null = null;
 
-        console.log("🧾 receiptUrl final:", receiptUrl);
-        console.log("🔐 providerHash:", providerHash);
+        try {
+          // priorité 1 : IPN déjà parsé
+          if (parsed && typeof parsed === "object") {
+            receiptUrl = parsed.receipt_url ?? null;
+          }
 
-        // ⚠️ (optionnel mais recommandé) : sécurité minimale
-        if (!receiptUrl) {
-          console.warn("⚠️ receipt_url manquant dans l’IPN");
+          // priorité 2 : re-parser rawData si besoin
+          if (!receiptUrl && typeof rawData === "string") {
+            const rawParsed = JSON.parse(rawData);
+            receiptUrl = rawParsed?.receipt_url ?? null;
+          }
+
+          // priorité 3 : fallback verify API
+          if (!receiptUrl && verifyData) {
+            receiptUrl =
+              verifyData.receipt_url ??
+              verifyData?.invoice?.receipt_url ??
+              null;
+          }
+        } catch (err) {
+          console.error("❌ Erreur extraction receipt_url:", err);
         }
 
-        // 🚀 2. Mise à jour atomique
+        console.log("🧾 receiptUrl FINAL:", receiptUrl);
+        console.log("🔐 providerHash:", providerHash);
+
+        // ⚠️ sécurité minimale
+        if (!receiptUrl) {
+          console.warn(
+            "⚠️ receipt_url introuvable - vérifie le payload PayDunya",
+          );
+        }
+
+        // 🚀 3. Transaction DB
         await prisma.$transaction([
           prisma.paiement.update({
             where: { id: paiement.id },
             data: {
               statut: "SUCCES",
-              receiptUrl,
+              receiptUrl: receiptUrl, // 👈 bien enregistré ici
               providerHash,
               callbackAt: new Date(),
               rawData: {
