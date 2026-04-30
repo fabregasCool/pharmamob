@@ -1,61 +1,34 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const [status, setStatus] = useState("loading");
-
   useEffect(() => {
     if (!token) return;
 
-    const checkPaiement = async () => {
-      try {
-        const res = await fetch(
-          `/api/clientbackend/paiement/paydunya/check?token=${token}`,
-        );
-        const data = await res.json();
-
+    fetch(`/api/clientbackend/paiement/paydunya/check?token=${token}`)
+      .then((res) => res.json())
+      .then((data) => {
         console.log("CHECK:", data);
 
-        if (data.statut === "SUCCES") {
-          setStatus("success");
-        } else if (data.statut === "EN_COURS") {
-          setStatus("pending");
-        } else {
-          setStatus("error");
+        // 🔥 option : ouvrir le reçu automatiquement
+        if (data.receiptUrl) {
+          console.log("📄 Reçu dispo:", data.receiptUrl);
         }
-      } catch (err) {
-        console.error(err);
-        setStatus("error");
-      }
-    };
-
-    checkPaiement();
-
-    // 🔁 option : recheck toutes les 3 secondes
-    const interval = setInterval(checkPaiement, 3000);
-
-    return () => clearInterval(interval);
+      })
+      .catch((err) => console.error("Erreur check:", err));
   }, [token]);
 
-  // 🎨 affichage dynamique
-  if (status === "loading") {
-    return <div>⏳ Vérification du paiement...</div>;
-  }
-
-  if (status === "pending") {
-    return <div>⏳ Paiement en cours de validation...</div>;
-  }
-
-  if (status === "success") {
-    return <div>✅ Paiement validé avec succès !</div>;
-  }
-
-  return <div>❌ Une erreur est survenue</div>;
+  return (
+    <div>
+      <h2>✅ Paiement réussi</h2>
+      <p>Votre paiement a été effectué avec succès.</p>
+    </div>
+  );
 }
 
 export default function Page() {
