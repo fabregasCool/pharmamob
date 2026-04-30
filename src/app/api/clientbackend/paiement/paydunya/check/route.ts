@@ -83,11 +83,23 @@ export async function GET(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
+        // 🔥 récupérer depuis verifyData (LA BONNE SOURCE)
+        const receiptUrl =
+          verifyData?.receipt_url ?? verifyData?.invoice?.receipt_url ?? null;
+
+        const providerHash =
+          verifyData?.hash || req.headers.get("x-paydunya-signature") || null;
+
+        console.log("🧾 receiptUrl:", receiptUrl);
+        console.log("🔐 providerHash:", providerHash);
+
         await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
-            rawData: verifyData,
+            receiptUrl, // ✅ maintenant ça marche
+            providerHash, // ✅ maintenant ça marche
+            rawData: verifyData, // ou parsed + verify si tu veux
             callbackAt: new Date(),
           },
         });
