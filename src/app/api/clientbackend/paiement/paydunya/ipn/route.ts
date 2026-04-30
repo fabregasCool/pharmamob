@@ -94,11 +94,21 @@ export async function POST(req: NextRequest) {
       case "completed":
         console.log("✅ Paiement réussi");
 
+        // 🔥 extraction depuis IPN (parsed)
+        const receiptUrl = parsed?.receipt_url ?? null;
+        const providerHash =
+          parsed?.hash || req.headers.get("x-paydunya-signature") || null;
+
+        console.log("🧾 receiptUrl:", receiptUrl);
+        console.log("🔐 providerHash:", providerHash);
+
         await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
             statut: "SUCCES",
-            rawData: verifyData,
+            receiptUrl, // 👈 ajouté
+            providerHash, // 👈 ajouté
+            rawData: parsed, // 👈 garde IPN (important)
             callbackAt: new Date(),
           },
         });
