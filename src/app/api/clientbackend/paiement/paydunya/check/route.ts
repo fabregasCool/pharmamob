@@ -132,7 +132,6 @@ export async function GET(req: NextRequest) {
     }
 
     return Response.json(verifyData);
-
   } catch (error) {
     console.error("❌ ERREUR CHECK:", error);
     return Response.json({ error: "Erreur serveur" }, { status: 500 });
