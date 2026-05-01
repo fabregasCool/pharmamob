@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
 
         await prisma.ordonnance.update({
           where: { id: paiement.resourceId },
-          data: { statut: "PAYEE", ordonnanceId: paiement.resourceId },
+          data: { statut: "PAYEE" },
         });
         //Ce qui est retourné, ce sera le lien du reçu
         return Response.json({
