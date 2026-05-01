@@ -108,6 +108,11 @@ export async function GET(req: NextRequest) {
           where: { id: paiement.resourceId },
           data: { statut: "PAYEE" },
         });
+        //Ce qui est retourné, ce sera le lien du reçu
+        return Response.json({
+          statut: "SUCCES",
+          receiptUrl,
+        });
 
         break;
 
