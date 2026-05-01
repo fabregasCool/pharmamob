@@ -106,15 +106,13 @@ export async function GET(req: NextRequest) {
 
         await prisma.ordonnance.update({
           where: { id: paiement.resourceId },
-          data: { statut: "PAYEE" },
+          data: { statut: "PAYEE", ordonnanceId: paiement.resourceId },
         });
         //Ce qui est retourné, ce sera le lien du reçu
         return Response.json({
           statut: "SUCCES",
           receiptUrl,
         });
-
-        break;
 
       case "pending":
         console.log("⏳ En attente");
