@@ -1,4 +1,4 @@
-// src/api/clientbackend/paiement/paydunya/ipn
+// src/app/api/clientbackend/paiement/paydunya/ipn
 
 import { NextRequest } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
@@ -26,20 +26,18 @@ export async function POST(req: NextRequest) {
       return new Response("Invalid JSON", { status: 400 });
     }
 
-    // 🔥 données venant DIRECTEMENT de l’IPN
     const token = parsed?.invoice?.token;
-    const ipnStatus = parsed?.status;
-
-    console.log("🪙 TOKEN:", token);
-    console.log("📊 IPN STATUS:", ipnStatus);
 
     if (!token) {
+      console.error("❌ Token manquant");
       return new Response("Token manquant", { status: 400 });
     }
 
-    // 🔍 1. Vérification auprès de PayDunya
+    console.log("🪙 TOKEN:", token);
+
+    // 🔍 1. Vérification auprès de PayDunya (COMME /check)
     const verifyResponse = await fetch(
-      `https://app.paydunya.com/sandbox-api/v1/checkout-invoice/confirm/${token}`,
+      `https://app.paydunya.com/api/v1/checkout-invoice/confirm/${token}`, // 🔥 PROD
       {
         method: "GET",
         headers: {
@@ -50,39 +48,44 @@ export async function POST(req: NextRequest) {
       },
     );
 
+    if (!verifyResponse.ok) {
+      console.error("❌ HTTP ERROR PAYDUNYA:", verifyResponse.status);
+      return new Response("Erreur PayDunya", { status: 500 });
+    }
+
     const verifyData = await verifyResponse.json();
 
-    console.log("✅ VERIFY PAYDUNYA  HASH:", verifyData.hash);
     console.log("✅ VERIFY PAYDUNYA:", verifyData);
 
-    // 🔍 2. Retrouver le paiement
+    // 🔐 2. Vérifier réponse PayDunya
+    if (!verifyData || verifyData.response_code !== "00") {
+      console.error("❌ Paiement non validé par PayDunya");
+      return new Response("Paiement invalide", { status: 400 });
+    }
+
+    // 🔍 3. Retrouver le paiement
     const paiement = await prisma.paiement.findFirst({
       where: { referenceExterne: token },
     });
 
     if (!paiement) {
+      console.error("❌ Paiement introuvable");
       return new Response("Paiement introuvable", { status: 404 });
     }
 
-    // 🛑 3. éviter double traitement
+    // 🛑 4. éviter double traitement
     if (paiement.statut === "SUCCES") {
-      console.log("⚠️ Paiement déjà traité");
+      console.log("⚠️ Déjà traité");
       return new Response("Déjà traité", { status: 200 });
     }
 
-    // 🔐 4. vérifier montant
+    // 🔐 5. Vérification montant (IDENTIQUE /check)
     const montantDB = (paiement.montant as Prisma.Decimal).toNumber();
     const montantPaydunya = Number(verifyData?.invoice?.total_amount);
 
     if (montantDB !== montantPaydunya) {
       console.error("❌ Montant incorrect !");
       return new Response("Montant invalide", { status: 400 });
-    }
-
-    // 🔐 5. vérifier réponse PayDunya
-    if (verifyData.response_code !== "00") {
-      console.error("❌ Paiement non validé par PayDunya");
-      return new Response("Paiement invalide", { status: 400 });
     }
 
     const verifyStatus = verifyData?.status;
@@ -92,34 +95,73 @@ export async function POST(req: NextRequest) {
       return new Response("Status invalide", { status: 400 });
     }
 
-    // 🔥 6. gestion des statuts
-    if (verifyStatus == "completed") {
-      console.log("✅ Paiement réussi");
-      // 🔥 récupérer depuis verifyData (LA BONNE SOURCE)
-      const receiptUrl = verifyData?.receipt_url;
+    console.log("📊 STATUS:", verifyStatus);
 
-      const providerHash = verifyData?.hash;
+    // 🔥 6. gestion des statuts (ALIGNÉ AVEC /check)
+    switch (verifyStatus) {
+      case "completed":
+        console.log("✅ Paiement réussi");
 
-      console.log("🧾 receiptUrl:", receiptUrl);
-      console.log("🔐 providerHash:", providerHash);
+        const receiptUrl =
+          verifyData?.receipt_url ?? verifyData?.invoice?.receipt_url ?? null;
 
-      await prisma.paiement.update({
-        where: { id: paiement.id },
-        data: {
-          statut: "REMBOURSE",
-          receiptUrl, // ✅ maintenant ça marche
-          providerHash, // ✅ maintenant ça marche
-          rawData: verifyData, // ou parsed + verify si tu veux
-          callbackAt: new Date(),
-        },
-      });
+        const providerHash =
+          verifyData?.hash || req.headers.get("x-paydunya-signature") || null;
 
-      await prisma.ordonnance.update({
-        where: { id: paiement.resourceId },
-        data: { statut: "PAYEE" },
-      });
-    } else {
-      console.log("Paiement echoué");
+        console.log("🧾 receiptUrl:", receiptUrl);
+        console.log("🔐 providerHash:", providerHash);
+
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: {
+            statut: "SUCCES", // ✅ CORRIGÉ (et pas REMBOURSE)
+            receiptUrl,
+            providerHash,
+            rawData: verifyData,
+            callbackAt: new Date(),
+          },
+        });
+
+        await prisma.ordonnance.update({
+          where: { id: paiement.resourceId },
+          data: { statut: "PAYEE" },
+        });
+
+        break;
+
+      case "pending":
+        console.log("⏳ En attente");
+
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: { statut: "EN_COURS" },
+        });
+
+        break;
+
+      case "cancelled":
+        console.log("❌ Annulé");
+
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: { statut: "ANNULE" },
+        });
+
+        break;
+
+      case "failed":
+        console.log("❌ Échoué");
+
+        await prisma.paiement.update({
+          where: { id: paiement.id },
+          data: { statut: "ECHEC" },
+        });
+
+        break;
+
+      default:
+        console.log("⚠️ Statut inconnu:", verifyStatus);
+        break;
     }
 
     return new Response("OK", { status: 200 });
