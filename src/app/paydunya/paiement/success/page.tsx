@@ -12,7 +12,7 @@ function SuccessContent() {
   useEffect(() => {
     if (!token) return;
 
-    fetch(`/api/clientbackend/paiement/paydunya/check?token=${token}`)
+    fetch(`/api/clientbackend/paiement/payduny/check?token=${token}`)
       .then((res) => res.json())
       .then((data) => {
         console.log("CHECK:", data);
