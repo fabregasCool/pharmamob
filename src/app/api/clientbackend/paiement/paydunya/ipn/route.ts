@@ -5,27 +5,51 @@ import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export async function POST(req: NextRequest) {
-  try {
-    const formData = await req.formData();
-    const rawData = formData.get("data");
+// ✅ Type minimal pour éviter "any"
+type PaydunyaIpnPayload = {
+  invoice?: {
+    token?: string;
+    total_amount?: number | string;
+    receipt_url?: string;
+  };
+  status?: string;
+  response_code?: string;
+  receipt_url?: string;
+  hash?: string;
+};
 
-    if (!rawData || typeof rawData !== "string") {
-      console.error("❌ data introuvable");
+export async function POST(req: NextRequest) {
+  console.log("🔥🔥🔥 IPN CALLED 🔥🔥🔥");
+
+  try {
+    // 🔥 1. Parsing robuste (JSON + form-data)
+    let parsed: PaydunyaIpnPayload;
+
+    try {
+      const contentType = req.headers.get("content-type") || "";
+      console.log("📦 Content-Type:", contentType);
+
+      if (contentType.includes("application/json")) {
+        parsed = (await req.json()) as PaydunyaIpnPayload;
+      } else {
+        const formData = await req.formData();
+        const rawData = formData.get("data");
+
+        if (!rawData || typeof rawData !== "string") {
+          throw new Error("data introuvable");
+        }
+
+        console.log("📩 RAW DATA (form):", rawData);
+        parsed = JSON.parse(rawData) as PaydunyaIpnPayload;
+      }
+    } catch (e) {
+      console.error("❌ Parsing IPN impossible:", e);
       return new Response("Bad Request", { status: 400 });
     }
 
-    console.log("📩 RAW DATA:", rawData);
+    console.log("✅ PARSED:", parsed);
 
-    let parsed;
-
-    try {
-      parsed = JSON.parse(rawData);
-    } catch {
-      console.error("❌ JSON invalide:", rawData);
-      return new Response("Invalid JSON", { status: 400 });
-    }
-
+    // 🔍 2. Token
     const token = parsed?.invoice?.token;
 
     if (!token) {
@@ -35,9 +59,9 @@ export async function POST(req: NextRequest) {
 
     console.log("🪙 TOKEN:", token);
 
-    // 🔍 1. Vérification auprès de PayDunya (COMME /check)
+    // 🔥 3. Vérification PayDunya (⚠️ SANDBOX)
     const verifyResponse = await fetch(
-      `https://app.paydunya.com/api/v1/checkout-invoice/confirm/${token}`, // 🔥 PROD
+      `https://app.paydunya.com/sandbox-api/v1/checkout-invoice/confirm/${token}`,
       {
         method: "GET",
         headers: {
@@ -53,17 +77,17 @@ export async function POST(req: NextRequest) {
       return new Response("Erreur PayDunya", { status: 500 });
     }
 
-    const verifyData = await verifyResponse.json();
+    const verifyData = (await verifyResponse.json()) as PaydunyaIpnPayload;
 
     console.log("✅ VERIFY PAYDUNYA:", verifyData);
 
-    // 🔐 2. Vérifier réponse PayDunya
+    // 🔐 4. Validation PayDunya
     if (!verifyData || verifyData.response_code !== "00") {
       console.error("❌ Paiement non validé par PayDunya");
       return new Response("Paiement invalide", { status: 400 });
     }
 
-    // 🔍 3. Retrouver le paiement
+    // 🔍 5. Retrouver paiement
     const paiement = await prisma.paiement.findFirst({
       where: { referenceExterne: token },
     });
@@ -73,15 +97,15 @@ export async function POST(req: NextRequest) {
       return new Response("Paiement introuvable", { status: 404 });
     }
 
-    // 🛑 4. éviter double traitement
+    // 🛑 6. éviter double traitement
     if (paiement.statut === "SUCCES") {
       console.log("⚠️ Déjà traité");
       return new Response("Déjà traité", { status: 200 });
     }
 
-    // 🔐 5. Vérification montant (IDENTIQUE /check)
+    // 🔐 7. Vérification montant
     const montantDB = (paiement.montant as Prisma.Decimal).toNumber();
-    const montantPaydunya = Number(verifyData?.invoice?.total_amount);
+    const montantPaydunya = Number(verifyData?.invoice?.total_amount ?? 0);
 
     if (montantDB !== montantPaydunya) {
       console.error("❌ Montant incorrect !");
@@ -97,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     console.log("📊 STATUS:", verifyStatus);
 
-    // 🔥 6. gestion des statuts (ALIGNÉ AVEC /check)
+    // 🔥 8. gestion des statuts
     switch (verifyStatus) {
       case "completed":
         console.log("✅ Paiement réussi");
@@ -114,18 +138,21 @@ export async function POST(req: NextRequest) {
         await prisma.paiement.update({
           where: { id: paiement.id },
           data: {
-            statut: "SUCCES", // ✅ CORRIGÉ (et pas REMBOURSE)
+            statut: "SUCCES",
             receiptUrl,
             providerHash,
-            rawData: verifyData,
+            rawData: verifyData as unknown as Prisma.InputJsonValue,
             callbackAt: new Date(),
           },
         });
 
-        await prisma.ordonnance.update({
-          where: { id: paiement.resourceId },
-          data: { statut: "PAYEE" },
-        });
+        // 🔐 sécurité sur type
+        if (paiement.type === "ORDONNANCE") {
+          await prisma.ordonnance.update({
+            where: { id: paiement.resourceId },
+            data: { statut: "PAYEE" },
+          });
+        }
 
         break;
 
