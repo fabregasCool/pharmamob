@@ -74,14 +74,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 🔥 calcul frais de service
+    const fraisService = Math.round(montant * 0.1);
+
+    // 🔥 montant final
+    const montantTotal = montant + fraisService;
+
     // 🔐 3. créer paiement
     const transactionId = crypto.randomUUID();
 
     const paiement = await prisma.paiement.create({
       data: {
         transactionId,
-        montant,
+
+        // 🔥 montant payé réellement
+        montant: montantTotal,
+
+        // 🔥 montant original facture
         montantInitial: montant,
+
+        // 🔥 frais
+        fraisService,
 
         devise: "XOF",
         methode,
@@ -106,7 +119,7 @@ export async function POST(req: NextRequest) {
     // 💳 4. créer facture PayDunya
     const result = await createPaydunyaInvoice({
       transactionId, // 🔥 IMPORTANT
-      amount: montant,
+      amount: montantTotal,
       description: `Paiement ${type}`,
       customer: {
         name: paiement.customerName || "",
@@ -115,9 +128,14 @@ export async function POST(req: NextRequest) {
       },
       items: [
         {
-          name: `Paiement ${type}`,
+          name: `Montant facture ${type}`,
           quantity: 1,
           unit_price: montant,
+        },
+        {
+          name: "Frais de service",
+          quantity: 1,
+          unit_price: fraisService,
         },
       ],
       callbackUrl: paiement.notifyUrl!,

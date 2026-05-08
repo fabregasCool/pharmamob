@@ -318,6 +318,7 @@ model Paiement {
 
   montant          Decimal          @db.Decimal(10, 2)
   montantInitial   Decimal          @db.Decimal(10, 2)//le montant original du paiement au moment où il a été créé, il sécurise le montant qui peut changer (on ne sait jamais)
+  fraisService     Decimal          @db.Decimal(10, 2) @default(0)
 
   devise           String           @default("XOF")//la monnaie utilisée pour le paiement: "XOF" est le  Franc CFA (Côte d'Ivoire 🇨🇮)
 
