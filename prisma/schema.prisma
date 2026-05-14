@@ -78,45 +78,6 @@ model Category {
 }
 
 
-model Bondecommande {
-  id               String              @id @default(cuid())
-  imageUrl         String
-  description      String?
-  securite_sociale String
-  userId           String
-  statut           BondecommandeStatut @default(ENVOYEE)
-  prixTotal        Decimal?            @db.Decimal(10, 2)
-  pharmacieId      String?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-  deletedAt        DateTime?
-
-  items       BondecommandeItem[]
-
-  pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
-  user             User                @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([pharmacieId])
-  @@index([statut])
-}
-
-// BondecommandeItem est reservé pour les bondecommandes envoyés afin de calculer le prix des produits
-model BondecommandeItem {
-  id            String   @id @default(cuid())
-  bondecommandeId  String
-  produitId     String?  // si le produit existe déjà dans la base
-  nomProduit    String   // si le produit vient seulement de l’ordonnance
-  quantite      Int
-  prixUnitaire  Int
-  createdAt     DateTime @default(now())
-
-  bondecommande Bondecommande @relation(fields: [bondecommandeId], references: [id])
-  produit    Produit?   @relation(fields: [produitId], references: [id])
-
-  @@index([bondecommandeId])
-}
-
 
 
 model Commune {
@@ -230,12 +191,14 @@ enum OrdonnanceStatut {
 }
 
 enum BondecommandeStatut {
-  ENVOYEE
-  DEVIS_RECU
-  DEVIS_VALIDEE_PAR_CLIENT
-  PRET
-  LIVREE
-  ANNULEE
+  ENVOYEE                   //bondecommande envoyé par le client
+  DEVIS_RECU                //pharmacie a envoyé le devis
+  DEVIS_VALIDEE_PAR_CLIENT  //client accepte le devis
+  PAYEE                     //paiement effectué
+  PRET                      //pharmacie prépare
+  EN_LIVRAISON              //livreur a pris la commande
+  LIVREE                    //client reçu
+  ANNULEE                   //annulée
 }
 
 enum Role {
@@ -259,6 +222,45 @@ enum CommandeStatus {
   LIVREE
   ANNULEE_PAR_PHARMACIE
   ANNULEE_PAR_LIVREUR
+}
+model Bondecommande {
+  id               String              @id @default(cuid())
+  imageUrl         String
+  description      String?
+  securite_sociale String
+  userId           String
+  statut           BondecommandeStatut @default(ENVOYEE)
+  prixTotal        Decimal?            @db.Decimal(10, 2)
+  pharmacieId      String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+
+  items            BondecommandeItem[]
+  paiements        Paiement[]
+
+  pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
+  user             User                @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([pharmacieId])
+  @@index([statut])
+}
+
+// BondecommandeItem est reservé pour les bondecommandes envoyés afin de calculer le prix des produits
+model BondecommandeItem {
+  id            String   @id @default(cuid())
+  bondecommandeId  String
+  produitId     String?  // si le produit existe déjà dans la base
+  nomProduit    String   // si le produit vient seulement de l’ordonnance
+  quantite      Int
+  prixUnitaire  Int
+  createdAt     DateTime @default(now())
+
+  bondecommande Bondecommande @relation(fields: [bondecommandeId], references: [id])
+  produit    Produit?   @relation(fields: [produitId], references: [id])
+
+  @@index([bondecommandeId])
 }
 model Ordonnance {
   id          String           @id @default(cuid())
@@ -358,6 +360,8 @@ model Paiement {
   ordonnanceId     String?
   ordonnance       Ordonnance?      @relation(fields: [ordonnanceId], references: [id])
 
+  bondecommandeId     String?
+  bondecommande       Bondecommande?      @relation(fields: [bondecommandeId], references: [id])
   // 🔥 système générique
   type             PaiementType
   resourceId       String //ID de la ressource(id de ordonnance ou bondecommande...) que tu es en train de payer

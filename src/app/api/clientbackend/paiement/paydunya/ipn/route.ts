@@ -153,6 +153,12 @@ export async function POST(req: NextRequest) {
             data: { statut: "PAYEE" },
           });
         }
+         if (paiement.type === "BON_COMMANDE") {
+          await prisma.bondecommande.update({
+            where: { id: paiement.resourceId },
+            data: { statut: "PAYEE" },
+          });
+        }
 
         break;
 
