@@ -62,10 +62,6 @@ export async function GET(req: Request) {
         },
 
         paiements: {
-          where: {
-            statut: "SUCCES",
-          },
-
           orderBy: {
             createdAt: "desc",
           },
