@@ -47,26 +47,30 @@ export async function GET(req: Request) {
         statut: "PAYEE",
         deletedAt: null,
       },
+
       orderBy: {
         createdAt: "desc",
       },
-      select: {
-        id: true,
-        imageUrl: true,
-        description: true,
-        prixTotal: true,
-        statut: true,
-        createdAt: true,
 
-        /// 🔥 récupérer paiement
+      include: {
+        user: true,
+
+        pharmacie: {
+          include: {
+            commune: true,
+          },
+        },
+
         paiements: {
           where: {
             statut: "SUCCES",
           },
+
           orderBy: {
             createdAt: "desc",
           },
-          take: 1, //il prend le premier sur la liste; mais vu qu'il yaura qu'un seul recu par ordo, donc ça marche
+
+          take: 1,
 
           select: {
             receiptUrl: true,
