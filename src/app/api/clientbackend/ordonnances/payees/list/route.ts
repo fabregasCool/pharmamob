@@ -45,18 +45,37 @@ export async function GET(req: Request) {
       where: {
         userId: user.id,
         statut: "PAYEE",
-        deletedAt: null, // ✅ On filtre pour ne prendre que les ordonnances actives
+        deletedAt: null,
       },
       orderBy: {
         createdAt: "desc",
       },
       select: {
         id: true,
-        imageUrl: true, // ✅ Inclure l’image
+        imageUrl: true,
         description: true,
         prixTotal: true,
         statut: true,
         createdAt: true,
+
+        /// 🔥 récupérer paiement
+        paiements: {
+          where: {
+            statut: "SUCCES",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1, //il prend le premier sur la liste; mais vu qu'il yaura qu'un seul recu par ordo, donc ça marche
+
+          select: {
+            receiptUrl: true,
+            montant: true,
+            montantInitial: true,
+            fraisService: true,
+            createdAt: true,
+          },
+        },
       },
     });
 
