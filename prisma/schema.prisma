@@ -264,7 +264,6 @@ model BondecommandeItem {
 }
 model Ordonnance {
   id          String           @id @default(cuid())
-  numeroArticle Int?     // 🔥 numéro réel sur l’ordonnance
   imageUrl    String
   description String?
   userId      String
