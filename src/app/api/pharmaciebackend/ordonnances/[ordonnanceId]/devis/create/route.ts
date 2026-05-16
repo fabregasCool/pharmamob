@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 
 // ✅ Type propre
 type OrdonnanceItemInput = {
+  numeroArticle?: number;
   nomProduit: string;
   quantite: number;
   prixUnitaire: number;
@@ -35,6 +36,8 @@ export async function POST(
     if (
       !items.every(
         (item) =>
+          (typeof item.numeroArticle === "number" ||
+            item.numeroArticle === undefined) &&
           typeof item.nomProduit === "string" &&
           typeof item.quantite === "number" &&
           typeof item.prixUnitaire === "number",
@@ -126,6 +129,7 @@ export async function POST(
     await prisma.ordonnanceItem.createMany({
       data: items.map((item) => ({
         ordonnanceId,
+        numeroArticle: item.numeroArticle,
         nomProduit: item.nomProduit,
         quantite: item.quantite,
         prixUnitaire: item.prixUnitaire,
