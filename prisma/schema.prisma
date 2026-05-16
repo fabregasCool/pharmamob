@@ -289,6 +289,7 @@ model OrdonnanceItem {
   id            String   @id @default(cuid())
   ordonnanceId  String
   produitId     String?  // si le produit existe déjà dans la base
+  numeroArticle Int?     // 🔥 numéro réel sur l’ordonnance
   nomProduit    String   // si le produit vient seulement de l’ordonnance
   quantite      Int
   prixUnitaire  Int
