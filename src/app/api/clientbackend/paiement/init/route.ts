@@ -104,6 +104,11 @@ export async function POST(req: NextRequest) {
         type,
         resourceId,
 
+        // 🔥 RELATIONS IMPORTANTES, ON REMPLIT ordonnanceId et bondecommandeId
+        ordonnanceId: type === "ORDONNANCE" ? resourceId : null,
+
+        bondecommandeId: type === "BON_COMMANDE" ? resourceId : null,
+
         customerName: user.name ?? "",
         customerEmail: user.email ?? "",
         customerPhone: user.phone ?? "",
