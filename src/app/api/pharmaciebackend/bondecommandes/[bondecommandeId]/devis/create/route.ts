@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 
 // ✅ Type propre
 type BondecommandeItemInput = {
+  numeroArticle?: number;
   nomProduit: string;
   quantite: number;
   prixUnitaire: number;
@@ -35,6 +36,7 @@ export async function POST(
     if (
       !items.every(
         (item) =>
+          typeof item.numeroArticle === "number" &&
           typeof item.nomProduit === "string" &&
           typeof item.quantite === "number" &&
           typeof item.prixUnitaire === "number",
@@ -126,6 +128,7 @@ export async function POST(
     await prisma.bondecommandeItem.createMany({
       data: items.map((item) => ({
         bondecommandeId,
+        numeroArticle: item.numeroArticle,
         nomProduit: item.nomProduit,
         quantite: item.quantite,
         prixUnitaire: item.prixUnitaire,

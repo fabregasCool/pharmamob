@@ -251,8 +251,9 @@ model Bondecommande {
 model BondecommandeItem {
   id            String   @id @default(cuid())
   bondecommandeId  String
+  numeroArticle Int?     // 🔥 numéro réel sur le bondecommande
   produitId     String?  // si le produit existe déjà dans la base
-  nomProduit    String   // si le produit vient seulement de l’ordonnance
+  nomProduit    String   // si le produit vient seulement de bondecommande
   quantite      Int
   prixUnitaire  Int
   createdAt     DateTime @default(now())
