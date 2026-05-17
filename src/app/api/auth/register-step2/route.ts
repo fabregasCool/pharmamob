@@ -14,8 +14,8 @@ const requestSchema = z.object({
   phone: z
     .string()
     .regex(
-      /^(0|4|5|6|7|8|9)\d{9}$/,
-      "Numéro invalide : doit contenir 10 chiffres et commencer par 0,4,5,6,7,8 ou 9"
+      /^(0|2||4|5|6|7|8|9)\d{9}$/,
+      "Numéro invalide : doit contenir 10 chiffres et commencer par 0,2,4,5,6,7,8 ou 9",
     ),
   password: z.string().min(7, "Mot de passe trop court"),
   role: z.string().min(1, "Rôle requis"),
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     if (!otp) {
       return NextResponse.json(
         { error: "OTP invalide ou expiré" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues.map((err) => err.message) }, // ✅ utiliser .issues
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     console.error("Erreur serveur :", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
