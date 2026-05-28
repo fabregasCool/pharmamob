@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     // 🔍 1. Vérification auprès de PayDunya
     const verifyResponse = await fetch(
-      `https://app.paydunya.com/sandbox-api/v1/checkout-invoice/confirm/${token}`,
+      `https://app.paydunya.com/api/v1/checkout-invoice/confirm/${token}`,
       {
         method: "GET",
         headers: {

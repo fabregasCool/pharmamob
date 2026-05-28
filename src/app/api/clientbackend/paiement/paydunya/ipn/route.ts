@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
 
     // 🔥 3. Vérification PayDunya (⚠️ SANDBOX)
     const verifyResponse = await fetch(
-      `https://app.paydunya.com/sandbox-api/v1/checkout-invoice/confirm/${token}`,
+      `https://app.paydunya.com/api/v1/checkout-invoice/confirm/${token}`,
       {
         method: "GET",
         headers: {
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
             data: { statut: "PAYEE" },
           });
         }
-         if (paiement.type === "BON_COMMANDE") {
+        if (paiement.type === "BON_COMMANDE") {
           await prisma.bondecommande.update({
             where: { id: paiement.resourceId },
             data: { statut: "PAYEE" },

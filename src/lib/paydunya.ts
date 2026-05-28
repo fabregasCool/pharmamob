@@ -49,7 +49,7 @@ export async function createPaydunyaInvoice({
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     const response = await fetch(
-      "https://app.paydunya.com/sandbox-api/v1/checkout-invoice/create",
+      "https://app.paydunya.com/api/v1/checkout-invoice/create",
       {
         method: "POST",
         headers: {
@@ -114,7 +114,7 @@ export async function createPaydunyaInvoice({
 
     if (!response.ok) {
       throw new Error(data?.message || "Erreur PayDunya");
-    }                                                                                            
+    }
 
     if (data?.response_code !== "00") {
       throw new Error(data?.response_text || "Erreur PayDunya");
