@@ -68,3 +68,11 @@ function SuccessContent() {
     </div>
   );
 }
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={<div>Chargement...</div>}>
+      <SuccessContent />
+    </Suspense>
+  );
+}
