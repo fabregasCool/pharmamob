@@ -1,7 +1,9 @@
 // lib/auth.ts
 import jwt from "jsonwebtoken";
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 interface JwtPayload {
   email: string;
@@ -31,5 +33,5 @@ export async function getUserFromRequest(req: NextRequest) {
     select: { id: true, email: true, role: true, name: true, phone: true },
   });
 
-  return user; // null si l'utilisateur a été supprimé entretemps
+  return user;
 }

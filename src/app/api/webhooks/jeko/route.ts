@@ -1,6 +1,8 @@
 // app/api/webhooks/jeko/route.ts
-import { prisma } from "@/lib/prisma";
+import { PrismaClient } from "@prisma/client";
 import { verifyJekoSignature } from "@/lib/jeko";
+
+const prisma = new PrismaClient();
 
 interface JekoTransactionDetails {
   id?: string;

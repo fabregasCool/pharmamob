@@ -1,7 +1,10 @@
+// app/api/payments/create/route.ts
 import { NextRequest } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { PrismaClient } from "@prisma/client";
 import { createJekoPaymentRequest } from "@/lib/jeko";
 import { getUserFromRequest } from "@/lib/auth";
+
+const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,7 +50,6 @@ export async function POST(req: NextRequest) {
     const fraisService = Math.round(total * 0.1);
     const montant = total + fraisService;
 
-    // 🛡️ Garde-fou explicite : on refuse d'appeler Jèko avec un montant invalide
     if (!montant || Number.isNaN(montant) || montant <= 0) {
       console.error("❌ Montant invalide calculé:", {
         total,
