@@ -53,7 +53,9 @@ export async function POST(request: Request) {
   const body: JekoWebhookBody = JSON.parse(rawBody);
   console.log("📦 Body parsé:", JSON.stringify(body, null, 2));
 
-  queueMicrotask(() => traiterTransactionJeko(body));
+  // queueMicrotask(() => traiterTransactionJeko(body));
+  // 👇 await au lieu de queueMicrotask : garantit que le traitement se termine avant la réponse
+  await traiterTransactionJeko(body);
 
   return Response.json({ received: true }, { status: 200 });
 }

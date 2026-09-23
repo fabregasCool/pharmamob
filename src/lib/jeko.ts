@@ -1,3 +1,4 @@
+//lib/jeko.ts
 import crypto from "crypto";
 
 const JEKO_BASE_URL = "https://api.jeko.africa/partner_api";
