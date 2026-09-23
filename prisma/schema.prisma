@@ -25,6 +25,7 @@ model User {
   otps           Otp[]
   pharmacies     Pharmacie[]
   paiements      Paiement[]
+  paiementsJeko   PaiementJeko[]   // 👈 AJOUTER
 }
 
 model Cart {
@@ -77,9 +78,6 @@ model Category {
   produits  Produit[]
 }
 
-
-
-
 model Commune {
   id          String      @id @default(cuid())
   name        String      @unique
@@ -131,7 +129,6 @@ model Pharmacie {
 }
 
 
-
 model Otp {
   id        String   @id @default(cuid())
   code      String
@@ -154,8 +151,6 @@ model Token {
 
   @@unique([email, token])
 }
-
-
 
 model Commande {
   id                    String         @id @default(cuid())
@@ -238,6 +233,7 @@ model Bondecommande {
 
   items            BondecommandeItem[]
   paiements        Paiement[]
+  paiementsJeko   PaiementJeko[]   // 👈 AJOUTER
 
   pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
   user             User                @relation(fields: [userId], references: [id])
@@ -277,6 +273,7 @@ model Ordonnance {
 
   items       OrdonnanceItem[]
   paiements   Paiement[]
+  paiementsJeko   PaiementJeko[]   // 👈 AJOUTER
 
   pharmacie   Pharmacie?       @relation(fields: [pharmacieId], references: [id])
   user        User             @relation(fields: [userId], references: [id])
@@ -388,4 +385,80 @@ enum PaiementType {
   ORDONNANCE
   BON_COMMANDE
   LIVRAISON
+}
+
+//Jeko
+enum JekoPaiementStatut {
+  PENDING   // demande créée, en attente que le client valide
+  SUCCESS   // confirmé par webhook
+  ERROR     // échec confirmé par webhook ou par polling GET
+  EXPIRE    // jamais confirmé, expiré côté vous
+}
+
+enum JekoPaymentMethod {
+  WAVE
+  ORANGE
+  MTN
+  MOOV
+  DJAMO
+  CARTE
+}
+
+model PaiementJeko {
+  id                    String              @id @default(cuid())
+
+  // Identifiants Jèko
+  jekoPaymentRequestId  String?             @unique // "id" renvoyé par Jèko à la création
+  reference             String              @unique // votre référence, envoyée à Jèko
+
+  montant               Decimal             @db.Decimal(10, 2)
+  montantInitial        Decimal             @db.Decimal(10, 2)
+  devise                String              @default("XOF")
+
+  paymentMethod         JekoPaymentMethod?
+  statut                JekoPaiementStatut  @default(PENDING)
+
+  redirectUrl           String?             // URL hébergée par Jèko renvoyée à la création
+  successUrl             String?
+  errorUrl               String?
+
+  // Renseignés uniquement à la réception du webhook TRANSACTION_COMPLETED
+  transactionId          String?
+  counterpartLabel       String?             // ex: nom du payeur
+  counterpartIdentifier  String?             // ex: numéro mobile money
+  errorReason            String?
+  fraisJeko              Decimal?            @db.Decimal(10, 2)
+
+  rawCreateResponse      Json?               // réponse brute de la création
+  rawWebhookData         Json?               // corps brut du webhook reçu
+
+  customerName           String?
+  customerEmail          String?
+  customerPhone          String?
+
+  callbackAt             DateTime?           // horodatage de réception du webhook
+  expiresAt              DateTime?
+  deletedAt              DateTime?
+
+  // Relations, même logique générique que Paiement
+  userId                 String
+  user                   User                @relation(fields: [userId], references: [id])
+
+  ordonnanceId           String?
+  ordonnance             Ordonnance?         @relation(fields: [ordonnanceId], references: [id])
+
+  bondecommandeId        String?
+  bondecommande          Bondecommande?      @relation(fields: [bondecommandeId], references: [id])
+
+  type                   PaiementType
+  resourceId             String
+
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([resourceId])
+  @@index([reference])
+  @@index([jekoPaymentRequestId])
+  @@index([statut])
 }
