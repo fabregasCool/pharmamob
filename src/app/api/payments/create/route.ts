@@ -66,13 +66,11 @@ export async function POST(req: NextRequest) {
     const amountCents = Math.round(montant * 100);
     console.log("💰 Paiement à créer:", { amountCents, montant });
 
-    const amount = Math.round(montant); // XOF n'a pas de sous-unité , c'est les frais de Jeko(1%)
-
     const reference = `ORDONNANCE-${resourceId}-${Date.now()}`;
 
     if (provider === "jeko") {
       const jekoRes = await createJekoPaymentRequest({
-        amountCents: amount,
+        amountCents,
         reference,
         paymentMethod,
       });
