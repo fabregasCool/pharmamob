@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -46,10 +46,10 @@ export async function POST(req: Request) {
     const accessToken = jwt.sign(
       { email: user.email, role: user.role, userId: user.id },
       process.env.JWT_SECRET!,
-      { expiresIn: "5m" }
+      { expiresIn: "5m" },
     );
 
-    // 🔑 Créer Refresh Token (7 jours)
+    // 🔑 Créer Refresh Token (7 jours nés)
     const refreshToken = crypto.randomBytes(48).toString("hex");
     const refreshExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -81,13 +81,13 @@ export async function POST(req: Request) {
     if (err instanceof z.ZodError) {
       return NextResponse.json(
         { error: err.issues.map((i) => i.message) },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("❌ Erreur login:", err);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
