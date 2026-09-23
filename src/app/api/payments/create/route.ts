@@ -1,54 +1,114 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createJekoPaymentRequest } from "@/lib/jeko";
-// import { createPaydunyaInvoice } from "@/lib/paydunya"; // à brancher plus tard
+import { getUserFromRequest } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
-  const { provider, type, resourceId, montant, userId, paymentMethod } =
-    await req.json();
-  // type: "ORDONNANCE" | "BON_COMMANDE" | "LIVRAISON"
-  // resourceId: id de l'Ordonnance ou du Bondecommande concerné
+  try {
+    const user = await getUserFromRequest(req);
+    if (!user)
+      return Response.json({ error: "Non authentifié" }, { status: 401 });
 
-  const reference = `${type}-${resourceId}-${Date.now()}`;
+    const { provider, type, resourceId, paymentMethod } = await req.json();
 
-  if (provider === "jeko") {
-    const jekoRes = await createJekoPaymentRequest({
-      amountCents: montant * 100,
-      reference,
-      paymentMethod,
+    if (type !== "ORDONNANCE") {
+      return Response.json(
+        { error: "Type non supporté pour le moment" },
+        { status: 400 },
+      );
+    }
+    if (!resourceId) {
+      return Response.json({ error: "resourceId manquant" }, { status: 400 });
+    }
+
+    const ordonnance = await prisma.ordonnance.findUnique({
+      where: { id: resourceId },
     });
+    if (!ordonnance) {
+      return Response.json(
+        { error: "Ordonnance introuvable" },
+        { status: 404 },
+      );
+    }
+    if (!ordonnance.prixTotal) {
+      return Response.json(
+        { error: "Le devis n'a pas encore de prix" },
+        { status: 400 },
+      );
+    }
+    if (ordonnance.statut !== "DEVIS_VALIDEE_PAR_CLIENT") {
+      return Response.json(
+        { error: "Le devis doit être validé avant paiement" },
+        { status: 400 },
+      );
+    }
 
-    const paiement = await prisma.paiementJeko.create({
-      data: {
-        reference,
-        jekoPaymentRequestId: jekoRes.id,
+    const total = Number(ordonnance.prixTotal);
+    const fraisService = Math.round(total * 0.1);
+    const montant = total + fraisService;
+
+    // 🛡️ Garde-fou explicite : on refuse d'appeler Jèko avec un montant invalide
+    if (!montant || Number.isNaN(montant) || montant <= 0) {
+      console.error("❌ Montant invalide calculé:", {
+        total,
+        fraisService,
         montant,
-        montantInitial: montant,
+        prixTotal: ordonnance.prixTotal,
+      });
+      return Response.json(
+        { error: "Montant invalide, impossible de créer le paiement" },
+        { status: 400 },
+      );
+    }
+
+    const amountCents = Math.round(montant * 100);
+    console.log("💰 Paiement à créer:", { amountCents, montant });
+
+    const reference = `ORDONNANCE-${resourceId}-${Date.now()}`;
+
+    if (provider === "jeko") {
+      const jekoRes = await createJekoPaymentRequest({
+        amountCents,
+        reference,
+        paymentMethod,
+      });
+
+      const paiement = await prisma.paiementJeko.create({
+        data: {
+          reference,
+          jekoPaymentRequestId: jekoRes.id,
+          montant,
+          montantInitial: montant,
+          redirectUrl: jekoRes.redirectUrl,
+          paymentMethod: paymentMethod ? paymentMethod.toUpperCase() : null,
+          statut: "PENDING",
+          rawCreateResponse: jekoRes,
+          userId: user.id,
+          type: "ORDONNANCE",
+          resourceId,
+          ordonnanceId: resourceId,
+        },
+      });
+
+      return Response.json({
         redirectUrl: jekoRes.redirectUrl,
-        paymentMethod: paymentMethod?.toUpperCase(),
-        statut: "PENDING",
-        rawCreateResponse: jekoRes,
-        userId,
-        type,
-        resourceId,
-        ...(type === "ORDONNANCE" ? { ordonnanceId: resourceId } : {}),
-        ...(type === "BON_COMMANDE" ? { bondecommandeId: resourceId } : {}),
-      },
-    });
+        paiementId: paiement.id,
+      });
+    }
 
-    return Response.json({
-      redirectUrl: jekoRes.redirectUrl,
-      paiementId: paiement.id,
-    });
-  }
+    if (provider === "paydunya") {
+      return Response.json(
+        { error: "PayDunya pas encore implémenté" },
+        { status: 501 },
+      );
+    }
 
-  if (provider === "paydunya") {
-    // À brancher sur votre implémentation PayDunya existante (table Paiement)
+    return Response.json({ error: "Provider inconnu" }, { status: 400 });
+  } catch (err) {
+    console.error("❌ Erreur /api/payments/create:", err);
     return Response.json(
-      { error: "PayDunya pas encore implémenté" },
-      { status: 501 },
+      { error: err instanceof Error ? err.message : "Erreur interne" },
+      { status: 500 },
     );
   }
-
-  return Response.json({ error: "Provider inconnu" }, { status: 400 });
 }
