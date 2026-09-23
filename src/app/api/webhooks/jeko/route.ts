@@ -65,19 +65,19 @@ async function traiterTransactionJeko(body: JekoWebhookBody) {
   }
 
   const transaction = body as JekoTransactionCompleted;
-  const paymentRequestId = transaction.transactionDetails?.id;
+  const reference = transaction.transactionDetails?.reference;
 
-  console.log("🔎 paymentRequestId extrait:", paymentRequestId);
+  console.log("🔎 reference extraite:", reference);
 
-  if (!paymentRequestId) {
+  if (!reference) {
     console.error(
-      "❌ Aucun paymentRequestId trouvé dans transactionDetails.id — structure inattendue",
+      "❌ Aucune reference trouvée dans transactionDetails.reference — structure inattendue",
     );
     return;
   }
 
   const paiement = await prisma.paiementJeko.findUnique({
-    where: { jekoPaymentRequestId: paymentRequestId },
+    where: { reference },
   });
 
   console.log("🔎 Paiement trouvé en base:", paiement ? paiement.id : "AUCUN");
@@ -97,12 +97,12 @@ async function traiterTransactionJeko(body: JekoWebhookBody) {
     where: { id: paiement.id },
     data: {
       statut: nouveauStatut,
+      jekoPaymentRequestId:
+        paiement.jekoPaymentRequestId ?? transaction.transactionDetails?.id,
       transactionId: transaction.id,
       counterpartLabel: transaction.counterpartLabel,
       counterpartIdentifier: transaction.counterpartIdentifier,
-      fraisJeko: transaction.fees?.amount
-        ? transaction.fees.amount / 100
-        : undefined,
+      fraisJeko: transaction.fees?.amount ?? undefined,
       callbackAt: new Date(),
       rawWebhookData: transaction as unknown as object,
     },
