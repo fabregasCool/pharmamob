@@ -43,11 +43,15 @@ export async function POST(request: Request) {
   const rawBody = await request.text();
   const signature = request.headers.get("jeko-signature");
 
+  console.log("📩 Webhook Jèko reçu (rawBody):", rawBody);
+
   if (!verifyJekoSignature(rawBody, signature)) {
+    console.error("❌ Signature invalide");
     return Response.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   const body: JekoWebhookBody = JSON.parse(rawBody);
+  console.log("📦 Body parsé:", JSON.stringify(body, null, 2));
 
   queueMicrotask(() => traiterTransactionJeko(body));
 
@@ -55,20 +59,39 @@ export async function POST(request: Request) {
 }
 
 async function traiterTransactionJeko(body: JekoWebhookBody) {
-  if ("event" in body && body.event === "SERVICE_PROVIDER_LINK_REQUEST") return;
+  if ("event" in body && body.event === "SERVICE_PROVIDER_LINK_REQUEST") {
+    console.log("↩️ Event SERVICE_PROVIDER_LINK_REQUEST ignoré");
+    return;
+  }
 
   const transaction = body as JekoTransactionCompleted;
   const paymentRequestId = transaction.transactionDetails?.id;
-  if (!paymentRequestId) return;
+
+  console.log("🔎 paymentRequestId extrait:", paymentRequestId);
+
+  if (!paymentRequestId) {
+    console.error(
+      "❌ Aucun paymentRequestId trouvé dans transactionDetails.id — structure inattendue",
+    );
+    return;
+  }
 
   const paiement = await prisma.paiementJeko.findUnique({
     where: { jekoPaymentRequestId: paymentRequestId },
   });
+
+  console.log("🔎 Paiement trouvé en base:", paiement ? paiement.id : "AUCUN");
+
   if (!paiement) return;
 
-  if (paiement.statut === "SUCCESS" || paiement.statut === "ERROR") return;
+  if (paiement.statut === "SUCCESS" || paiement.statut === "ERROR") {
+    console.log("↩️ Paiement déjà traité, statut actuel:", paiement.statut);
+    return;
+  }
 
   const nouveauStatut = transaction.status === "success" ? "SUCCESS" : "ERROR";
+
+  console.log("✏️ Mise à jour du paiement:", paiement.id, "→", nouveauStatut);
 
   await prisma.paiementJeko.update({
     where: { id: paiement.id },
@@ -91,12 +114,14 @@ async function traiterTransactionJeko(body: JekoWebhookBody) {
         where: { id: paiement.ordonnanceId },
         data: { statut: "PAYEE" },
       });
+      console.log("✅ Ordonnance marquée PAYEE:", paiement.ordonnanceId);
     }
     if (paiement.type === "BON_COMMANDE" && paiement.bondecommandeId) {
       await prisma.bondecommande.update({
         where: { id: paiement.bondecommandeId },
         data: { statut: "PAYEE" },
       });
+      console.log("✅ Bon de commande marqué PAYEE:", paiement.bondecommandeId);
     }
   }
 }
