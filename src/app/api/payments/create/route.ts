@@ -89,6 +89,10 @@ export async function POST(req: NextRequest) {
           type: "ORDONNANCE",
           resourceId,
           ordonnanceId: resourceId,
+          // 👇 AJOUT
+          customerName: user.name,
+          customerEmail: user.email,
+          customerPhone: user.phone,
         },
       });
 
