@@ -53,8 +53,8 @@ function JekoEchecContent() {
           validée jusqu&apos;au bout. Vous pouvez réessayer avec le même moyen
           de paiement ou un autre.
         </p>
-        <Link href="/commandes" style={styles.button}>
-          Retour à mes commandes
+        <Link href="" style={styles.button}>
+          Svp Retournez dans PharmaMob.
         </Link>
       </div>
     </div>

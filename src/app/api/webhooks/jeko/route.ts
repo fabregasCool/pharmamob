@@ -107,6 +107,11 @@ async function traiterTransactionJeko(body: JekoWebhookBody) {
       fraisJeko: transaction.fees?.amount / 100, // 👇 diviser par 100 : fees.amount est dans la même unité que amountCents envoyé
       callbackAt: new Date(),
       rawWebhookData: transaction as unknown as object,
+      // 👇 AJOUT : ne remplit que si le paiement a échoué
+      errorReason:
+        nouveauStatut === "ERROR"
+          ? transaction.description || "Paiement refusé ou annulé"
+          : undefined,
     },
   });
 

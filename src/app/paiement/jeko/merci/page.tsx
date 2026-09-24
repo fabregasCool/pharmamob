@@ -118,8 +118,8 @@ function JekoMerciContent() {
             <p style={styles.subtext}>
               Votre commande est en cours de préparation.
             </p>
-            <Link href="/commandes" style={styles.button}>
-              Voir mes commandes
+            <Link href="" style={styles.button}>
+              Retournez dans PharmaMob pour voir vos Commandes
             </Link>
           </>
         )}
