@@ -104,7 +104,7 @@ async function traiterTransactionJeko(body: JekoWebhookBody) {
       transactionId: transaction.id,
       counterpartLabel: transaction.counterpartLabel,
       counterpartIdentifier: transaction.counterpartIdentifier,
-      fraisJeko: transaction.fees?.amount ?? undefined,
+      fraisJeko: transaction.fees?.amount / 100, // 👇 diviser par 100 : fees.amount est dans la même unité que amountCents envoyé
       callbackAt: new Date(),
       rawWebhookData: transaction as unknown as object,
     },
