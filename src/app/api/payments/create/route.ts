@@ -67,12 +67,16 @@ export async function POST(req: NextRequest) {
     console.log("💰 Paiement à créer:", { amountCents, montant });
 
     const reference = `ORDONNANCE-${resourceId}-${Date.now()}`;
+    const successUrl = `${process.env.APP_URL}/paiement/jeko/merci?ref=${reference}`;
+    const errorUrl = `${process.env.APP_URL}/paiement/jeko/echec?ref=${reference}`;
 
     if (provider === "jeko") {
       const jekoRes = await createJekoPaymentRequest({
         amountCents,
         reference,
         paymentMethod,
+        successUrl,
+        errorUrl,
       });
 
       const paiement = await prisma.paiementJeko.create({
@@ -89,10 +93,11 @@ export async function POST(req: NextRequest) {
           type: "ORDONNANCE",
           resourceId,
           ordonnanceId: resourceId,
-          // 👇 AJOUT
           customerName: user.name,
           customerEmail: user.email,
           customerPhone: user.phone,
+          successUrl,
+          errorUrl,
         },
       });
 

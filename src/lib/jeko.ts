@@ -1,4 +1,4 @@
-//lib/jeko.ts
+// lib/jeko.ts
 import crypto from "crypto";
 
 const JEKO_BASE_URL = "https://api.jeko.africa/partner_api";
@@ -14,12 +14,20 @@ function jekoHeaders() {
 export async function createJekoPaymentRequest({
   amountCents,
   reference,
-  paymentMethod, // "wave" | "orange" | "mtn" | "moov" | "djamo" | undefined
+  paymentMethod,
+  successUrl,
+  errorUrl,
 }: {
   amountCents: number;
   reference: string;
   paymentMethod?: string;
+  successUrl: string;
+  errorUrl: string;
 }) {
+  if (!amountCents || Number.isNaN(amountCents) || amountCents <= 0) {
+    throw new Error(`amountCents invalide: ${amountCents}`);
+  }
+
   const res = await fetch(`${JEKO_BASE_URL}/payment_requests`, {
     method: "POST",
     headers: jekoHeaders(),
@@ -32,8 +40,8 @@ export async function createJekoPaymentRequest({
         type: "redirect",
         data: {
           ...(paymentMethod ? { paymentMethod } : {}),
-          successUrl: `${process.env.APP_URL}/paiement/jeko/merci?ref=${reference}`,
-          errorUrl: `${process.env.APP_URL}/paiement/jeko/echec?ref=${reference}`,
+          successUrl,
+          errorUrl,
         },
       },
     }),
@@ -41,15 +49,13 @@ export async function createJekoPaymentRequest({
 
   const data = await res.json();
   if (!res.ok) throw new Error(`Jèko error: ${JSON.stringify(data)}`);
-  return data; // { id, redirectUrl, status, ... }
+  return data;
 }
 
 export async function getJekoPaymentRequest(paymentRequestId: string) {
   const res = await fetch(
     `${JEKO_BASE_URL}/payment_requests/${paymentRequestId}`,
-    {
-      headers: jekoHeaders(),
-    },
+    { headers: jekoHeaders() },
   );
   if (!res.ok) throw new Error("Jèko: impossible de récupérer le statut");
   return res.json();
