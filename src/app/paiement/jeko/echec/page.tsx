@@ -1,10 +1,20 @@
+//src/app/paiement/jeko/echec/page.tsx
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function JekoEchecPage() {
+  return (
+    <Suspense fallback={<LoadingCard />}>
+      <JekoEchecContent />
+    </Suspense>
+  );
+}
+
+function JekoEchecContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get("ref");
 
@@ -51,6 +61,17 @@ export default function JekoEchecPage() {
   );
 }
 
+function LoadingCard() {
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <div style={styles.spinner} />
+        <h1 style={styles.title}>Chargement…</h1>
+      </div>
+    </div>
+  );
+}
+
 const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: "100vh",
@@ -87,5 +108,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     textDecoration: "none",
     fontWeight: 600,
+  },
+  spinner: {
+    width: 40,
+    height: 40,
+    margin: "0 auto 16px",
+    border: "4px solid #e5e7eb",
+    borderTopColor: "#dc2626",
+    borderRadius: "50%",
+    animation: "spin 0.8s linear infinite",
   },
 };

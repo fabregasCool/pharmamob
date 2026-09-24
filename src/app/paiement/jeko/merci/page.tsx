@@ -1,7 +1,7 @@
 //src/app/paiement/jeko/merci/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -16,6 +16,14 @@ const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 20;
 
 export default function JekoMerciPage() {
+  return (
+    <Suspense fallback={<LoadingCard />}>
+      <JekoMerciContent />
+    </Suspense>
+  );
+}
+
+function JekoMerciContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get("ref");
 
@@ -142,6 +150,17 @@ export default function JekoMerciPage() {
             </Link>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function LoadingCard() {
+  return (
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <div style={styles.spinner} />
+        <h1 style={styles.title}>Chargement…</h1>
       </div>
     </div>
   );
