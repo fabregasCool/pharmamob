@@ -233,7 +233,7 @@ model Bondecommande {
 
   items            BondecommandeItem[]
   paiements        Paiement[]
-  paiementsJeko   PaiementJeko[]   // 👈 AJOUTER
+  paiementsJeko    PaiementJeko[]   // 👈 AJOUTER
 
   pharmacie        Pharmacie?          @relation(fields: [pharmacieId], references: [id])
   user             User                @relation(fields: [userId], references: [id])
@@ -271,8 +271,8 @@ model Ordonnance {
   updatedAt   DateTime         @updatedAt
   deletedAt   DateTime?
 
-  items       OrdonnanceItem[]
-  paiements   Paiement[]
+  items           OrdonnanceItem[]
+  paiements       Paiement[]
   paiementsJeko   PaiementJeko[]   // 👈 AJOUTER
 
   pharmacie   Pharmacie?       @relation(fields: [pharmacieId], references: [id])

@@ -6,6 +6,8 @@ import { getUserFromRequest } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
+type PaiementType = "ORDONNANCE" | "BON_COMMANDE";
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getUserFromRequest(req);
@@ -14,39 +16,59 @@ export async function POST(req: NextRequest) {
 
     const { provider, type, resourceId, paymentMethod } = await req.json();
 
-    if (type !== "ORDONNANCE") {
-      return Response.json(
-        { error: "Type non supporté pour le moment" },
-        { status: 400 },
-      );
+    if (type !== "ORDONNANCE" && type !== "BON_COMMANDE") {
+      return Response.json({ error: "Type non supporté" }, { status: 400 });
     }
     if (!resourceId) {
       return Response.json({ error: "resourceId manquant" }, { status: 400 });
     }
 
-    const ordonnance = await prisma.ordonnance.findUnique({
-      where: { id: resourceId },
-    });
-    if (!ordonnance) {
-      return Response.json(
-        { error: "Ordonnance introuvable" },
-        { status: 404 },
-      );
+    // 🔹 Récupération de la ressource selon son type
+    let prixTotal: number | null = null;
+    let statutActuel: string | null = null;
+
+    if (type === "ORDONNANCE") {
+      const ordonnance = await prisma.ordonnance.findUnique({
+        where: { id: resourceId },
+      });
+      if (!ordonnance) {
+        return Response.json(
+          { error: "Ordonnance introuvable" },
+          { status: 404 },
+        );
+      }
+      prixTotal = ordonnance.prixTotal ? Number(ordonnance.prixTotal) : null;
+      statutActuel = ordonnance.statut;
+    } else {
+      const bondecommande = await prisma.bondecommande.findUnique({
+        where: { id: resourceId },
+      });
+      if (!bondecommande) {
+        return Response.json(
+          { error: "Bon de commande introuvable" },
+          { status: 404 },
+        );
+      }
+      prixTotal = bondecommande.prixTotal
+        ? Number(bondecommande.prixTotal)
+        : null;
+      statutActuel = bondecommande.statut;
     }
-    if (!ordonnance.prixTotal) {
+
+    if (!prixTotal) {
       return Response.json(
         { error: "Le devis n'a pas encore de prix" },
         { status: 400 },
       );
     }
-    if (ordonnance.statut !== "DEVIS_VALIDEE_PAR_CLIENT") {
+    if (statutActuel !== "DEVIS_VALIDEE_PAR_CLIENT") {
       return Response.json(
         { error: "Le devis doit être validé avant paiement" },
         { status: 400 },
       );
     }
 
-    const total = Number(ordonnance.prixTotal);
+    const total = prixTotal;
     const fraisService = Math.round(total * 0.1);
     const montant = total + fraisService;
 
@@ -55,7 +77,6 @@ export async function POST(req: NextRequest) {
         total,
         fraisService,
         montant,
-        prixTotal: ordonnance.prixTotal,
       });
       return Response.json(
         { error: "Montant invalide, impossible de créer le paiement" },
@@ -64,9 +85,9 @@ export async function POST(req: NextRequest) {
     }
 
     const amountCents = Math.round(montant * 100);
-    console.log("💰 Paiement à créer:", { amountCents, montant });
+    console.log("💰 Paiement à créer:", { amountCents, montant, type });
 
-    const reference = `ORDONNANCE-${resourceId}-${Date.now()}`;
+    const reference = `${type}-${resourceId}-${Date.now()}`;
     const successUrl = `${process.env.APP_URL}/paiement/jeko/merci?ref=${reference}`;
     const errorUrl = `${process.env.APP_URL}/paiement/jeko/echec?ref=${reference}`;
 
@@ -90,14 +111,17 @@ export async function POST(req: NextRequest) {
           statut: "PENDING",
           rawCreateResponse: jekoRes,
           userId: user.id,
-          type: "ORDONNANCE",
+          type: type as PaiementType,
           resourceId,
-          ordonnanceId: resourceId,
           customerName: user.name,
           customerEmail: user.email,
           customerPhone: user.phone,
           successUrl,
           errorUrl,
+          // 🔹 On ne remplit que la clé correspondant au type
+          ...(type === "ORDONNANCE"
+            ? { ordonnanceId: resourceId }
+            : { bondecommandeId: resourceId }),
         },
       });
 
