@@ -86,7 +86,7 @@ export async function PATCH(
     const updatedBondecommande = await prisma.bondecommande.update({
       where: { id: bondecommandeId },
       data: {
-        statut: "DEVIS_VALIDEE_PAR_CLIENT",
+        statut: "DEVIS_RECU",
       },
     });
 

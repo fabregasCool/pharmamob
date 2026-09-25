@@ -86,7 +86,7 @@ export async function PATCH(
     const updatedOrdonnance = await prisma.ordonnance.update({
       where: { id: ordonnanceId },
       data: {
-        statut: "DEVIS_VALIDEE_PAR_CLIENT",
+        statut: "DEVIS_RECU",
       },
     });
 
