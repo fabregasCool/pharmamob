@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (statutActuel !== "DEVIS_VALIDEE_PAR_CLIENT") {
+    if (statutActuel !== "DEVIS_RECU") {
       return Response.json(
         { error: "Le devis doit être validé avant paiement" },
         { status: 400 },
